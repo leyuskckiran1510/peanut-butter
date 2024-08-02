@@ -13,6 +13,9 @@ SOURCE_OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCE))
 
 EXECUTABLE = peanut
 
+
+r:clean all run
+
 all:$(EXECUTABLE)
 
 $(EXECUTABLE):$(SOURCE_OBJ)
@@ -21,7 +24,6 @@ $(EXECUTABLE):$(SOURCE_OBJ)
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -l:$(CIVETWEB) -c $< -o $@ $(CFLAGS)
 
-r:run
 
 run:
 	./$(EXECUTABLE)
