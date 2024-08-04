@@ -3,11 +3,14 @@ Aim of this project to build a miniframework to get started with the
 web with speed out of the box.
 
 
-# Recent Status
-1. Handles static HTML serve at http not https
+# Features
+1. Static HTML server with costume route [completed]
+2. Server static files [2024-Aug-04] [working...]
 
-# uses [civetweb](https://github.com/civetweb/civetweb)
-This project uses very old version of civetweb i.e civetweb 1.8.
+
+# Technology and Software in Use
+1. [civetweb](https://github.com/civetweb/civetweb)
+    This project uses very old version of civetweb i.e civetweb 1.8.
 
 
 

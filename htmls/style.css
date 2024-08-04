@@ -1,0 +1,20 @@
+.navbar{
+    display: flex;
+    flex-direction: row;
+}
+.navbar.navitem{
+    background: burlywood;
+    width: 5rem;
+    height: 5rem;
+}
+
+main{
+    display: flex;
+    background: #181818;
+}
+section:before{
+    content: "->";
+}
+footer{
+    background: #1c1cff;
+}

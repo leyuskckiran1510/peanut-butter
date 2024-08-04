@@ -1,11 +1,11 @@
 CC = gcc
-EFLAGS = -ggdb3 -Wall -Wextra -pedantic   -lpthread -fsanitize=address
+EFLAGS = -Wall -Wextra -pedantic   -lpthread  -fsanitize=address
 SRCDIR = src
 INCDIR = ./include
 LIBDIR = ./lib
 BUILDDIR = build
 BINDIR = bin
-CFLAGS = -I$(INCDIR) -L$(LIBDIR)
+CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 
 CIVETWEB = civetweb.o
 
 SOURCE = $(wildcard $(SRCDIR)/*.c)
