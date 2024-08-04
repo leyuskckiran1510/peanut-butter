@@ -5,7 +5,8 @@ web with speed out of the box.
 
 # Features
 1. Static HTML server with costume route [completed]
-2. Server static files [2024-Aug-04] [working...]
+2. Server static files [2024-Aug-04] [completed]
+3. Add regex route and URl variables [not-started]
 
 
 # Technology and Software in Use
