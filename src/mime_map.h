@@ -29,15 +29,18 @@
             CASE(file_ext,"epub","application/epub+zip");\
             CASE(file_ext,"gz","application/gzip");\
             CASE(file_ext,"gif","image/gif");\
-            CASE(file_ext,"htm, .html","text/html");\
+            CASE(file_ext,"htm","text/html");\
+            CASE(file_ext,"html","text/html");\
             CASE(file_ext,"ico","image/vnd.microsoft.icon");\
             CASE(file_ext,"ics","text/calendar");\
             CASE(file_ext,"jar","application/java-archive");\
-            CASE(file_ext,"jpeg, .jpg","image/jpeg");\
+            CASE(file_ext,"jpeg","image/jpeg");\
+            CASE(file_ext,"jpg","image/jpeg");\
             CASE(file_ext,"js","text/javascript");\
             CASE(file_ext,"json","application/json");\
             CASE(file_ext,"jsonld","application/ld+json");\
-            CASE(file_ext,"mid, .midi","audio/midi");\
+            CASE(file_ext,"mid","audio/midi");\
+            CASE(file_ext,"midi","audio/midi");\
             CASE(file_ext,"mjs","text/javascript");\
             CASE(file_ext,"mp3","audio/mpeg");\
             CASE(file_ext,"mp4","video/mp4");\
@@ -62,7 +65,8 @@
             CASE(file_ext,"sh","application/x-sh");\
             CASE(file_ext,"svg","image/svg+xml");\
             CASE(file_ext,"tar","application/x-tar");\
-            CASE(file_ext,"tif, .tiff","image/tiff");\
+            CASE(file_ext,"tif","image/tiff");\
+            CASE(file_ext,"tiff","image/tiff");\
             CASE(file_ext,"ts","video/mp2t");\
             CASE(file_ext,"ttf","font/ttf");\
             CASE(file_ext,"txt","text/plain");\

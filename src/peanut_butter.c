@@ -9,17 +9,30 @@
 
 #define MAX_SIZE 1024
 #define MAX_DIR_DEPTH 10
+#define URL_ARG_STRING_INCR_RATE 10
+
 
 #define IS_SEP(x) ( ((x)=='/') || ((x)=='\\') )
 
 
-void _pb_add_route(char* url, ViewCallback callback){
+void PB(add_route(char* url, ViewCallback callback)){
+    log_debug("Added Route '%s' ",url);
     Route route = {
         .url = url,
         .callback = callback
     };
     ROUTE_TABLE.routes[ROUTE_TABLE.count] = route;
     ROUTE_TABLE.count++;
+}
+
+void PB(add_var_route(char*  var_route,ViewCallbackArgs callback)){
+    log_debug("Added Route '%s' ",var_route);
+    Route route = {
+        .url = var_route,
+        .callbackargs = callback
+    };
+    VAR_ROUTE_TABLE.routes[VAR_ROUTE_TABLE.count] = route;
+    VAR_ROUTE_TABLE.count++;
 }
 
 
@@ -71,7 +84,7 @@ char * virtual_path_traverse(const char *file_path){
     return clean_path;
 }
 
-const char * get_mime_type(const char *file_path){
+const char *get_mime_type(const char *file_path){
     char *file_ext = malloc(10);
     uint8_t path_ptr = 0,ext_ptr=0;
     while(file_path[path_ptr]!='.' && file_path[path_ptr]) path_ptr++;
@@ -81,7 +94,7 @@ const char * get_mime_type(const char *file_path){
     MIME_TYPE_MATCH(file_ext);
 }
 
-static int serve_file(const char *file_path,Request request){
+static int serve_file(Request request,const char *file_path){
     char *path = virtual_path_traverse(file_path);
     const char *mime_type = get_mime_type(path);
     mg_send_mime_file(request,path,mime_type);
@@ -89,45 +102,180 @@ static int serve_file(const char *file_path,Request request){
     return 0;
 }
 
+int consume_digit(const char *str,UrlArg *arg){
+    int count = 0;
+    arg->value = 0;
+    arg->type = UAT_INTEGER;
+    while(str[count]>='0' && str[count]<='9'){
+        arg->value = arg->value * 10 + str[count]-'0';
+        count++;
+    }
+    return count;
+}
+int consume_char(const char *str,UrlArg *arg){
+    arg->value = str[0];
+    arg->type = UAT_CHARACTER;
+    return 1;
+}
+
+int print_able_range(char letter){
+    // printable character range
+    // SPACE to ~
+    return 32<=letter && letter<=126;
+}
+
+int consume_str(const char *str,UrlArg *arg){
+    char *new_str = malloc(URL_ARG_STRING_INCR_RATE);
+    int count = 0,resized=0;
+
+    arg->type = UAT_STRING;
+
+    while(print_able_range(str[count]) && str[count]!='/'){
+        if (count>= URL_ARG_STRING_INCR_RATE * (resized+1)){
+            new_str = realloc(new_str,URL_ARG_STRING_INCR_RATE * (resized+2) );
+            resized++;
+        }
+        new_str[count] = str[count];
+        count++;
+    }
+    arg->ua_char_ptr = new_str;
+    return count;
+}
+int consume_float(const char *str,UrlArg *arg){
+    //
+    return 0;
+}
+int consume_double(const char *str,UrlArg *arg){
+    //
+    return 0;
+}
+
+int consume_arg(char type,const char *str,UrlArg *arg){
+    log_info("Consume Type [%c] ",type);
+    switch (type) {
+        case 'd':return consume_digit(str,arg);
+        case 's':return consume_str(str,arg);
+        case 'c':return consume_char(str,arg);
+        case 'f':return consume_float(str,arg);
+        case 'l':return consume_double(str,arg);
+        default: return 0;
+    }
+}
+
+int count_fmt_args(const char *fmt_url){
+    char *ref = (char *)fmt_url;
+    int count = 0;
+    while(ref[0]){
+        switch (ref[0]) {
+        case '%':
+            ref++;
+            if(ref[0]!='%')count++;
+        }
+        ref++;
+    }
+    return  count;
+}
+
+UrlArgs find_if_match(const char* route_url,const char *url){
+    
+    //route copy init
+    int route_len = strlen(route_url);
+    char *fmt_url = malloc(route_len);
+    memcpy(fmt_url,route_url,sizeof(char)*route_len);
+    int url_ptr=0;
+
+    // args intialization
+    UrlArgs args = INIT_URL_ARGS();
+    int total_args = count_fmt_args(fmt_url);
+    
+    if(total_args==0)
+        return  args;
+
+    args.args = malloc(sizeof(UrlArg)*total_args);
+    args.length = total_args;
+    int cur_arg = 0;
+
+
+
+    // fill args from url using route_structure
+    while(fmt_url[0]){
+        if(fmt_url[0]=='%' && fmt_url[1]!='%'){
+            url_ptr += consume_arg(fmt_url[1],(url+url_ptr),&args.args[cur_arg]);
+            fmt_url++;
+            fmt_url++;
+            cur_arg++;
+        }else if(fmt_url[0]==(url+url_ptr)[0]){
+            fmt_url++;
+            url_ptr++;
+        }else{
+            args.length=0;
+            if(args.args != NULL)
+                free(args.args);
+            return  args;
+        }
+    }
+    return args;
+}
+
+
+void free_url_args(UrlArgs args){
+    for (int i = 0; i < args.length; ++i){
+        if(args.args[i].type ==  UAT_STRING && args.args[i].ua_char_ptr != NULL){
+            free(args.args[i].ua_char_ptr);
+        }
+    }
+    free(args.args);
+}
 
 static int begin_request_handler(struct mg_connection *conn){
     const struct mg_request_info *request_info = mg_get_request_info(conn);
+    log_debug("New connection at %s",request_info->uri);
+    // normal url search
     for (size_t i = 0; i < ROUTE_TABLE.count; ++i){
         if(!strcmp(request_info->uri,ROUTE_TABLE.routes[i].url)){
-            ROUTE_TABLE.routes[i].callback(request_info->request_method,conn);
+            ROUTE_TABLE.routes[i].callback(conn);
             return 1;
         }
     }
-    if (!serve_file((request_info->uri+1),conn)) {
+    // variabled url search
+    for (size_t i = 0; i < VAR_ROUTE_TABLE.count; ++i){
+        log_info("%s | %s",request_info->uri,VAR_ROUTE_TABLE.routes[i].url);
+        UrlArgs args = find_if_match(VAR_ROUTE_TABLE.routes[i].url,request_info->uri);
+        if(args.length>0){
+            VAR_ROUTE_TABLE.routes[i].callbackargs(conn,args);
+            free_url_args(args);
+            return 1;
+        }
+    }
+
+    if (!serve_file(conn,(request_info->uri+1))) {
         return 1;
     }
 
-    char content[MAX_SIZE];
-    FILE *fp = fopen("htmls/404.html","r");
-    int content_length = fread(content,sizeof(char),MAX_SIZE,fp);
-    mg_printf(conn,
-              "HTTP/1.1 200 OK\r\n"
-              "Content-Type: text/html\r\n"
-              "Content-Length: %d\r\n"
-              "\r\n"
-              "%s",
-              content_length, content);
+    serve_file(conn,"htmls/404.html");
     return 1;
 }
 
 void render_html(Request request,const char* file_name){
-    char content[MAX_SIZE];
-    FILE *fp = fopen(file_name,"r");
-    int content_length = fread(content,sizeof(char),MAX_SIZE,fp);
+    if(!serve_file(request,file_name)){
+        return;
+    }
+    log_error("Failed To Render %s",file_name);
+}
+void render_text(Request request,const char * text){
     mg_printf(request,
               "HTTP/1.1 200 OK\r\n"
               "Content-Type: text/html\r\n"
-              "Content-Length: %d\r\n"
+              "Content-Length: %lu\r\n"
               "\r\n"
               "%s",
-              content_length, content);
+              strlen(text), text);
 }
 
+const char * get_method(Request request){
+    const struct mg_request_info *request_info = mg_get_request_info(request);
+    return request_info->request_method;
+};
 
 int server_run(char *port){
     struct mg_context *ctx;
@@ -136,7 +284,10 @@ int server_run(char *port){
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
     ctx = mg_start(&callbacks, NULL, options);
+    log_info("Server Running at localhost:%s ...",port);
     getchar();
+    log_info("Server Stoped ");
+    log_info("Exiting ... ");
     mg_stop(ctx);
     return 0;
 }
