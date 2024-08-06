@@ -9,7 +9,7 @@ web with speed out of the box.
 3. Extended route features
     1. In route  variables [2024-Aug-05] [almost completed]
     1. Regex route   [2024-Aug-05] [cancled for now]
-4. Redirect, Html templating
+4. HTML templating , Redirect, 
 
 
 # Technology and Software in Use
@@ -45,12 +45,12 @@ void about(Request request){
     return render_html(request,"htmls/about.html");
 }
 
-void user_home(Request request,UrlArgs urlags){
+void user_home(Request request,UrlVariables urlags){
     char secrete = 'k';
     // this is bad way to validate admins, 
     // this is just a fun example
     if(urlags.args[0].value==0 && urlags.args[1].value == secrete){
-        log_info("Admin name is %s",urlags.args[2].ua_char_ptr);
+        log_info("Admin name is %s",urlags.args[2].value_string);
         return render_html(request,"htmls/admin.html");
     }
     return render_html(request,"htmls/index.html");

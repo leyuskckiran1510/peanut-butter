@@ -5,10 +5,11 @@ INCDIR = ./include
 LIBDIR = ./lib
 BUILDDIR = build
 BINDIR = bin
-CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 
+CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 -O3
 CIVETWEB = civetweb.o
 
-SOURCE = $(wildcard $(SRCDIR)/*.c)
+
+SOURCE = $(filter-out $(wildcard $(SRCDIR)/*thread*.c), $(wildcard $(SRCDIR)/*.c))
 SOURCE_OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCE))
 
 EXECUTABLE = peanut
