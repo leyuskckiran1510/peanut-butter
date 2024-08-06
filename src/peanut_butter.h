@@ -15,7 +15,7 @@
 
 
 #if DEBUG == 1
-    #define log(type,fmt,... ) printf( "[%5s] %s:%d | " fmt"\n",type,__FILE__,__LINE__, ##__VA_ARGS__ );
+    #define log(type,fmt,... ) printf( "[%5s] %s:%6d | " fmt"\n",type,__FILE__,__LINE__, ##__VA_ARGS__ );
 #else
     #define log(type,fmt,... )  ;
 #endif

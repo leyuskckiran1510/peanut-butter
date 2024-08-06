@@ -91,18 +91,20 @@ const char *get_mime_type(const char *file_path){
     path_ptr++;//consume '.'
     while(file_path[path_ptr] &&  ext_ptr<10)
         file_ext[ext_ptr++]=file_path[path_ptr++];
+    file_ext[ext_ptr]=0;
     MIME_TYPE_MATCH(file_ext);
 }
 
 static int serve_file(Request request,const char *file_path){
     char *path = virtual_path_traverse(file_path);
-    log_debug("Serving File... %s ",path);
     FILE *fp = fopen(path,"r");
     if(fp==NULL){
         return 1;
     }
     fclose(fp);
+
     const char *mime_type = get_mime_type(path);
+    log_debug("Serving File... %s [%s]",path,mime_type);
     mg_send_mime_file(request,path,mime_type);
     free(path);
     return 0;
@@ -326,7 +328,7 @@ void render_text(Request request,const char * text){
 
 int apply_template(char *from,char *to,TemplateVars templ_vars){
     memcpy(to,from,strlen(from));
-    return MAX_READ_CHUNK;
+    return strlen(from);
 }
 
 void render_template(Request request,const char* file_name,TemplateVars templ_vars){
@@ -339,11 +341,11 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
     }
 
     // convert the unique memory address to unique file name
-    uint8_t tmp_file_id = *(uint8_t  *)request;
+    size_t tmp_file_id = *(size_t  *)request;
     // max int has 10 digits for 32bit, and 20 digits for 64bits
     // so to  cover it 35 will be enough
     char tmp_file_name[35];
-    sprintf(tmp_file_name,"pb_tmp_%u.html",tmp_file_id);
+    sprintf(tmp_file_name,"pb_tmp_%lu.html",tmp_file_id);
 
     tmp_fp = fopen(tmp_file_name,"w");
     if(tmp_fp == NULL){
@@ -356,10 +358,13 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
     int ptr = 0,continue_from=0,read_buff_offset=0;
     while(!feof(fp)){
         // try to read whole chunk like a single object
-        fread((read_chunk+read_buff_offset),MAX_READ_CHUNK-read_buff_offset,1,fp);
+        int read_count = fread((read_chunk+read_buff_offset),1,MAX_READ_CHUNK-read_buff_offset-5,fp);
+        read_chunk[read_count]=0;
+
         continue_from = apply_template(read_chunk,write_chunk,templ_vars);
-        fwrite(write_chunk,MAX_READ_CHUNK,1,tmp_fp);
-        read_buff_offset = MAX_READ_CHUNK-continue_from;
+        log_debug("Inside File Chunker [%d]",MAX_READ_CHUNK-continue_from);
+        fwrite(write_chunk,1,continue_from,tmp_fp);
+        read_buff_offset = MAX_READ_CHUNK-continue_from-5;
         memcpy(read_chunk,(read_chunk+continue_from),read_buff_offset);
     }
     fclose(fp);
