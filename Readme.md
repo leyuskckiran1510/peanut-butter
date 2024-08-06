@@ -12,7 +12,7 @@ web with speed out of the box.
 4. HTML templating   [2024-Aug-06] [started-working] 
     - [2024-Aug-06], template copying works, now just swaping
         the template varibale is left
-        
+    
 5. Redirect 
 
 
