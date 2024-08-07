@@ -15,6 +15,10 @@
 #define IS_SEP(x) ( ((x)=='/') || ((x)=='\\') )
 
 
+#define and &&
+#define or ||
+#define xor ^
+
 void PB(add_route(char* url, ViewCallback callback)){
     log_debug("Added Route '%s' ",url);
     Route route = {
@@ -40,8 +44,8 @@ char * virtual_path_traverse(const char *file_path){
     
     // to prevent file_traversal attacks
     char *clean_path = malloc(strlen(file_path)+1);
-    uint8_t seprators[MAX_DIR_DEPTH] ={0};
-    uint8_t ptr = 0,sep_count=1,cpy_pointer=0;
+    uint16_t seprators[MAX_DIR_DEPTH] ={0};
+    uint16_t ptr = 0,sep_count=1,cpy_pointer=0;
     while(file_path[ptr]){
         // unix like systemfilepath    , windows file system
         if(IS_SEP(file_path[ptr]) && file_path[ptr+1]!='.'){
@@ -86,7 +90,7 @@ char * virtual_path_traverse(const char *file_path){
 
 const char *get_mime_type(const char *file_path){
     char *file_ext = malloc(10);
-    uint8_t path_ptr = 0,ext_ptr=0;
+    uint16_t path_ptr = 0,ext_ptr=0;
     while(file_path[path_ptr]!='.' && file_path[path_ptr]) path_ptr++;
     path_ptr++;//consume '.'
     while(file_path[path_ptr] &&  ext_ptr<10)
@@ -121,7 +125,7 @@ int consume_digit(const char *str,UrlVariable *arg){
     return count;
 }
 int consume_char(const char *str,UrlVariable *arg){
-    arg->value = str[0];
+    arg->c_value = str[0];
     arg->type = UAT_CHARACTER;
     return 1;
 }
@@ -133,7 +137,7 @@ int print_able_range(char letter){
 }
 
 int consume_str(const char *str,UrlVariable *arg){
-    char *new_str = malloc(URL_ARG_STRING_INCR_RATE);
+    char *new_str = calloc(URL_ARG_STRING_INCR_RATE,1);
     int count = 0,resized=0;
 
     arg->type = UAT_STRING;
@@ -146,7 +150,7 @@ int consume_str(const char *str,UrlVariable *arg){
         new_str[count] = str[count];
         count++;
     }
-    arg->value_string = new_str;
+    arg->s_value = new_str;
     return count;
 }
 int consume_float(const char *str,UrlVariable *arg){
@@ -170,7 +174,7 @@ int consume_float(const char *str,UrlVariable *arg){
         }
         count++;
     }
-    arg->value_float = value;
+    arg->f_value = value;
     arg->type = UAT_FLOAT;
     return count;
 }
@@ -198,7 +202,7 @@ int consume_double(const char *str,UrlVariable *arg){
         }
         count++;
     }
-    arg->value_double = value;
+    arg->d_value = value;
     arg->type = UAT_DOUBLE;
     return count;
     return 0;
@@ -274,26 +278,32 @@ UrlVariables find_if_match(const char* route_url,const char *url){
 
 void free_url_args(UrlVariables args){
     for (int i = 0; i < args.length; ++i){
-        if(args.args[i].type ==  UAT_STRING && args.args[i].value_string != NULL){
-            free(args.args[i].value_string);
+        if(args.args[i].type ==  UAT_STRING && args.args[i].s_value != NULL){
+            free(args.args[i].s_value);
         }
     }
     free(args.args);
 }
 
+void  free_template_var(TemplateVars templ_vars){
+    if(templ_vars.templ!=NULL){
+        free(templ_vars.templ);
+    }
+}
+
 static int begin_request_handler(struct mg_connection *conn){
     const struct mg_request_info *request_info = mg_get_request_info(conn);
-    log_debug("New connection at %s",request_info->uri);
+    log_debug("New connection at %s",request_info->local_uri);
     // normal url search
     for (size_t i = 0; i < ROUTE_TABLE.count; ++i){
-        if(!strcmp(request_info->uri,ROUTE_TABLE.routes[i].url)){
+        if(!strcmp(request_info->local_uri,ROUTE_TABLE.routes[i].url)){
             ROUTE_TABLE.routes[i].callback(conn);
             return 1;
         }
     }
     // variabled url search
     for (size_t i = 0; i < VAR_ROUTE_TABLE.count; ++i){
-        UrlVariables args = find_if_match(VAR_ROUTE_TABLE.routes[i].url,request_info->uri);
+        UrlVariables args = find_if_match(VAR_ROUTE_TABLE.routes[i].url,request_info->local_uri);
         if(args.length > 0){
             VAR_ROUTE_TABLE.routes[i].callbackargs(conn,args);
             free_url_args(args);
@@ -301,7 +311,7 @@ static int begin_request_handler(struct mg_connection *conn){
         }
     }
 
-    if (!serve_file(conn,(request_info->uri+1))) {
+    if (!serve_file(conn,(request_info->local_uri+1))) {
         return 1;
     }
 
@@ -325,10 +335,76 @@ void render_text(Request request,const char * text){
               strlen(text), text);
 }
 
+int not_white_space(char c){
+    // ! to ~
+    return c>=33 and c<=126;
+}
+
+
+int stamp_var(char *dest,size_t pos,UrlVariable var){
+    
+    char *value_string = calloc(50,1);
+    char *temp = value_string;
+    switch(var.type){
+        case UAT_STRING: free(value_string);value_string = var.s_value;temp = value_string;break;
+        case UAT_i: sprintf(value_string,"%d",var.i_value);break;
+        case UAT_f: sprintf(value_string,"%f",var.f_value);break;
+        case UAT_d: sprintf(value_string,"%lf",var.d_value);break;
+        case UAT_c: sprintf(value_string,"%c",var.c_value);break;
+        case UAT_u: value_string[0]=0;log_error("In stamp_var got unknown urlvaribale type ");break;
+    }
+    log_debug("%s",value_string);
+    while( pos<MAX_READ_CHUNK and temp[0]){
+        dest[pos] = temp[0];
+        pos++;
+        temp++;
+    }
+    if(var.type!=UAT_STRING){
+        free(value_string);
+    }
+    return pos;
+}
 
 int apply_template(char *from,char *to,TemplateVars templ_vars){
-    memcpy(to,from,strlen(from));
-    return strlen(from);
+    
+    uint16_t from_ptr = 0,to_ptr=0,from_ptr_copy=0;
+    char name[MAX_TEMPL_VAR_NAME]={0};
+
+    while(from[from_ptr] and to_ptr < (MAX_READ_CHUNK-5) ){
+        // found two '{' 
+        from_ptr_copy = from_ptr;
+        if(from[from_ptr]=='{' and from[from_ptr+1]=='{'){
+            uint8_t name_ptr = 0;
+            from_ptr+=2;
+            while(from[from_ptr] and from[from_ptr]!='}'){
+                if(not_white_space(from[from_ptr])){
+                    name[name_ptr++] = from[from_ptr];
+                }
+                from_ptr++;
+            }
+
+            // the read buffer ended before the template
+            // could have been rendered/parsed
+            if(!from[from_ptr]){
+                to[to_ptr] = 0;
+                return from_ptr_copy;
+            }
+            name[name_ptr]=0;
+            from_ptr+=2;
+            if(name_ptr>0 ){
+                for (int i = 0; i < templ_vars.length; ++i){
+                    if(!strcmp(templ_vars.templ[i].name,name)){
+                        to_ptr = stamp_var(to,to_ptr,templ_vars.templ[i].value);
+                    }
+                }
+
+
+            }
+        }
+        to[to_ptr++] = from[from_ptr++];
+    }
+
+    return from_ptr;
 }
 
 void render_template(Request request,const char* file_name,TemplateVars templ_vars){
@@ -358,22 +434,31 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
     int ptr = 0,continue_from=0,read_buff_offset=0;
     while(!feof(fp)){
         // try to read whole chunk like a single object
-        int read_count = fread((read_chunk+read_buff_offset),1,MAX_READ_CHUNK-read_buff_offset-5,fp);
+        int read_count = fread((read_chunk+read_buff_offset),1,MAX_READ_CHUNK-read_buff_offset-1,fp);
         read_chunk[read_count]=0;
 
         continue_from = apply_template(read_chunk,write_chunk,templ_vars);
         log_debug("Inside File Chunker [%d]",MAX_READ_CHUNK-continue_from);
-        fwrite(write_chunk,1,continue_from,tmp_fp);
-        read_buff_offset = MAX_READ_CHUNK-continue_from-5;
+        fwrite(write_chunk,1,strlen(write_chunk),tmp_fp);
+        read_buff_offset = MAX_READ_CHUNK-continue_from-1;
         memcpy(read_chunk,(read_chunk+continue_from),read_buff_offset);
     }
     fclose(fp);
     fclose(tmp_fp);
     log_debug("Serving Template file... [%s]",tmp_file_name);
     render_html(request,tmp_file_name);
-    // remove(tmp_file_name);
+    remove(tmp_file_name);
+    free_template_var(templ_vars);
 }
 
+
+void redirect(Request request,char *to_url,uint16_t redirect_code){
+    if(mg_send_http_redirect(request,to_url, redirect_code )<0){
+        log_error("Failed Redirecting to url [%s](%d)",to_url,redirect_code);
+    }
+    return ;
+
+}
 
 
 

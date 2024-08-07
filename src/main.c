@@ -1,6 +1,6 @@
 // #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
 #include "peanut_butter.h"
 
 
@@ -17,25 +17,23 @@ void about(Request request){
 }
 
 void user_home(Request request,UrlVariables urlags){
+    TEMP_INIT();
     if(urlags.args[0].value==123){
-        return render_html(request,"htmls/admin.html");
+        TEMP_VAL("name",urlags.args[2].s_value,s);
+        TEMP_VAL("age",urlags.args[1].i_value,i);
+        return render_template(request,"htmls/template.html",TEMP_VAR());
     }
-    return render_html(request,"htmls/index.html");
+    if(urlags.args[0].value<123){
+        return render_html(request,"htmls/index.html");
+    }
+    return redirect(request,"/",302);;
 }
 
-void template(Request request){
-    TemplateVars vars = {
-        .length=0,
-        .templ=NULL,
-    };
-    return render_template(request,"htmls/template.html",vars);
-}
 
 int server(){
     URL("/",home);
-    URL("/temp",template);
     URL("/about",about);
-    VAR_URL("/%d/%f/%s/home",user_home);
+    VAR_URL("/%d/%d/%s/home",user_home);
     return server_run("8080");
 }
 

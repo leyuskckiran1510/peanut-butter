@@ -7,19 +7,27 @@ web with speed out of the box.
 1. Static HTML server with costume route [completed]
 2. Server static files [2024-Aug-04] [completed]
 3. Extended route features
-    1. In route  variables [2024-Aug-05] [almost completed]
+    1. In route  variables [2024-Aug-06] [completed]
     1. Regex route   [2024-Aug-05] [cancled for now]
 4. HTML templating   [2024-Aug-06] [started-working] 
     - [2024-Aug-06], template copying works, now just swaping
         the template varibale is left
-    
-5. Redirect 
+    - [completed][2024-Aug-07:23-11-33 PM]
+5. Redirect, [completed] [2024-Aug-07:23-11-17 PM]
+6. urlencoded_parse [to work on]
 
+
+# Features To add
+1. Middlewares
+2. Authentications
+3. Persestent datas like Cookies and Sessions,
+4. RateLimiting
+5. HTTPS/test/support
+6. Parse Post forms/urls
+ 
 
 # Technology and Software in Use
 1. [civetweb](https://github.com/civetweb/civetweb)
-    This project uses very old version of civetweb i.e civetweb 1.8.
-    https://civetweb.github.io/civetweb/UserManual.html
 
 
 # Got starting point from 
@@ -84,9 +92,3 @@ make
 
 
 # FAQ
-
-1. Why does it use old version of civetweb when newer versions like 1.16 have been released?
--> The project started with a motive to implement https logics with [httplib](https://github.com/lammertb/libhttp),
-    which was a fork og civetweb, but was not mainted and caused troubles so, used the civetweb directly.
-2. Will civetweb version be updated?
--> Yes I will grdually increase to latest version and mainten accordingly.

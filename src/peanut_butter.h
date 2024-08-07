@@ -30,6 +30,21 @@
 #define URL(route,callback)  PB(add_route(route,&callback));
 #define VAR_URL(var_route,callback)  PB(add_var_route(var_route,&callback));
 
+#define MAX_TEMPL_VAR_NAME 30
+#define TEMPL_CHUNK 100
+#define TEMP_INIT() TemplateVars _tmpl_var = {.length=0,.templ=malloc(sizeof(TemplateVar)*TEMPL_CHUNK),};
+#define TEMP_VAL(_name,_avalue,_type) { \
+                                _tmpl_var.templ[_tmpl_var.length].name = _name;\
+                                _tmpl_var.templ[_tmpl_var.length].value._type##_value = _avalue;\
+                                _tmpl_var.templ[_tmpl_var.length].value.type =UAT_##_type;\
+                                _tmpl_var.length++; \
+                                 int mutiplier = (_tmpl_var.length/TEMPL_CHUNK)+1; \
+                                 if(_tmpl_var.length >= TEMPL_CHUNK*mutiplier){\
+                                       _tmpl_var.templ =realloc(_tmpl_var.templ,sizeof(TemplateVar)*TEMPL_CHUNK*mutiplier);\
+                                 }\
+                                }\
+
+#define TEMP_VAR()   _tmpl_var
 
 #define UrlVariable_TYPE(x,to)  switch (x){\
                         case 'd':to=UAT_INTEGER;break;\
@@ -41,22 +56,23 @@
                         }\
 
 typedef enum {
-    UAT_INTEGER=0,
-    UAT_CHARACTER,
-    UAT_STRING,
-    UAT_FLOAT,
-    UAT_DOUBLE,
-    UAT_UNKNOWN,
+    UAT_INTEGER=0,UAT_i=0,
+    UAT_CHARACTER=1,UAT_c=1,
+    UAT_STRING=2,UAT_s=2,
+    UAT_FLOAT=3,UAT_f=3,
+    UAT_DOUBLE=4,UAT_d=4,
+    UAT_UNKNOWN=5,UAT_u=5,
 }UrlVariableType;
 
 
 typedef struct{
     union {
         int value;
-        char value_char;
-        char* value_string;
-        float value_float;
-        double value_double;
+        int i_value;
+        char c_value;
+        char* s_value;
+        float f_value;
+        double d_value;
     };
     UrlVariableType type;
 
@@ -69,7 +85,7 @@ typedef struct{
 }TemplateVar;
 
 typedef struct{
-    TemplateVar templ;
+    TemplateVar *templ;
     uint8_t length;
 } TemplateVars;
 
@@ -112,6 +128,7 @@ int server_run(char *port);
 void render_html(Request request,const char* file_name);
 void render_template(Request request,const char* file_name,TemplateVars templ_vars);
 int count_fmt_args(const char *fmt_url);
+void redirect(Request request,char *to_url,uint16_t redirect_code);
 UrlVariables find_if_match(const char* og_url,const char *url);
 
 #endif
