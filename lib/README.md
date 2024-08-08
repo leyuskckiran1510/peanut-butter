@@ -20,11 +20,11 @@ rm -rf ./webtech
 
 ```
 
-# for windows [not-tested]
+# for windows
 ```ps
 git clone --depth=1 https://github.com/civetweb/civetweb webtech
 cd webtech
-make lib
+mingw32-make CC=gcc lib
 copy .\out\src\civetweb.* path\to\peanut_butter\lib\civetweb.*
 
 # optional
