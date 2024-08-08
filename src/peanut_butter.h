@@ -2,6 +2,7 @@
     #define __PEANUT_BUTTER__
 
 #include <stdint.h>
+#include <stdlib.h>
 #define MAX_ROUTES 1024
 #define PB(x)  _pb_##x
 #include "../include/civetweb.h"

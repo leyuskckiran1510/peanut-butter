@@ -365,7 +365,7 @@ int stamp_var(char *dest,size_t pos,UrlVariable var){
     return pos;
 }
 
-int apply_template(char *from,char *to,TemplateVars templ_vars){
+int apply_template(char *from,char *to,int *write_count,TemplateVars templ_vars){
     
     uint16_t from_ptr = 0,to_ptr=0,from_ptr_copy=0;
     char name[MAX_TEMPL_VAR_NAME]={0};
@@ -403,7 +403,8 @@ int apply_template(char *from,char *to,TemplateVars templ_vars){
         }
         to[to_ptr++] = from[from_ptr++];
     }
-
+    to[to_ptr]=0;
+    *write_count = to_ptr;
     return from_ptr;
 }
 
@@ -430,6 +431,7 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
 
     char read_chunk[MAX_READ_CHUNK];
     char write_chunk[MAX_READ_CHUNK];
+    int write_count=0;
 
     int ptr = 0,continue_from=0,read_buff_offset=0;
     while(!feof(fp)){
@@ -437,9 +439,10 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
         int read_count = fread((read_chunk+read_buff_offset),1,MAX_READ_CHUNK-read_buff_offset-1,fp);
         read_chunk[read_count]=0;
 
-        continue_from = apply_template(read_chunk,write_chunk,templ_vars);
+        continue_from = apply_template(read_chunk,write_chunk,&write_count,templ_vars);
         log_debug("Inside File Chunker [%d]",MAX_READ_CHUNK-continue_from);
-        fwrite(write_chunk,1,strlen(write_chunk),tmp_fp);
+        fwrite(write_chunk,1,write_count,tmp_fp);
+        
         read_buff_offset = MAX_READ_CHUNK-continue_from-1;
         memcpy(read_chunk,(read_chunk+continue_from),read_buff_offset);
     }
