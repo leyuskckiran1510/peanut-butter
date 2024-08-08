@@ -4,6 +4,7 @@ EFLAGS = -Wall -Wextra -pedantic   -lpthread  -fsanitize=address
 SRCDIR = src
 INCDIR = include
 LIBDIR = lib
+# please don't put '/' here otherwise you might wipe you system,if linux like
 BUILDDIR = build
 BINDIR = bin
 
@@ -22,7 +23,7 @@ SOURCE_OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCE))
 EXECUTABLE = peanut
 
 
-r:all run
+r:clean all run
 
 all:$(EXECUTABLE)
 
@@ -33,8 +34,10 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 run:
 	./$(EXECUTABLE)
 clean:
-	rm  $(BUILDDIR)
+ifeq ($(OS),Windows_NT)
+else
+	rm -r $(BUILDDIR)
+endif
 	mkdir build
-	
 
 .PHONY: all clean run
