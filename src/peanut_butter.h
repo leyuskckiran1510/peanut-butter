@@ -143,6 +143,10 @@ int server_run(char *port);
 void render_html(Request request,const char* file_name);
 void render_template(Request request,const char* file_name,TemplateVars templ_vars);
 void redirect(Request request,char *to_url,uint16_t redirect_code);
+/*
+🟥🟥 Don't forget to call `free_url_query` after you have completed using the
+query
+*/
 UrlQueries parse_query(Request request);
 void free_url_query(UrlQueries quires);
 #endif
