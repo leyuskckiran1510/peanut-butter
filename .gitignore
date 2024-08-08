@@ -1,4 +1,4 @@
 *.o
 *.out
-peanut
+peanut*
 pb_*
