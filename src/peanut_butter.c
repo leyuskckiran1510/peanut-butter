@@ -11,6 +11,7 @@
 #define MAX_DIR_DEPTH 10
 #define URL_ARG_STRING_INCR_RATE 10
 #define MAX_READ_CHUNK 1024*3                  // 3kb
+#define MAX_URL_QUERY_DATA 100
 
 #define IS_SEP(x) ( ((x)=='/') || ((x)=='\\') )
 
@@ -209,7 +210,6 @@ int consume_double(const char *str,UrlVariable *arg){
 }
 
 int consume_arg(char type,const char *str,UrlVariable *arg){
-    log_info("Consume Type [%c] ",type);
     switch (type) {
         case 'd':return consume_digit(str,arg);
         case 's':return consume_str(str,arg);
@@ -353,7 +353,6 @@ int stamp_var(char *dest,size_t pos,UrlVariable var){
         case UAT_c: sprintf(value_string,"%c",var.c_value);break;
         case UAT_u: value_string[0]=0;log_error("In stamp_var got unknown urlvaribale type ");break;
     }
-    log_debug("%s",value_string);
     while( pos<MAX_READ_CHUNK and temp[0]){
         dest[pos] = temp[0];
         pos++;
@@ -440,9 +439,7 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
         read_chunk[read_count]=0;
 
         continue_from = apply_template(read_chunk,write_chunk,&write_count,templ_vars);
-        log_debug("Inside File Chunker [%d]",MAX_READ_CHUNK-continue_from);
-        fwrite(write_chunk,1,write_count,tmp_fp);
-        
+        fwrite(write_chunk,1,write_count,tmp_fp);        
         read_buff_offset = MAX_READ_CHUNK-continue_from-1;
         memcpy(read_chunk,(read_chunk+continue_from),read_buff_offset);
     }
@@ -453,6 +450,52 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
     remove(tmp_file_name);
     free_template_var(templ_vars);
 }
+
+
+void free_url_query(UrlQueries quires){
+    for (int i = 0; i < quires.length; ++i){
+        if(quires.queries[i].name!=NULL)
+            free(quires.queries[i].name);
+        if(quires.queries[i].value!=NULL)
+            free(quires.queries[i].value);
+    }
+}
+
+UrlQueries parse_query(Request request){
+    const struct mg_request_info *request_info = mg_get_request_info(request);
+    const char *query = request_info->query_string;
+
+    int query_len = strlen(query)+1;
+    char *decoded_query = calloc(1,query_len);
+    mg_url_decode(query,query_len,decoded_query,query_len,1);
+    decoded_query[query_len-1]=0;
+    int copy_ptr=0;
+    UrlQueries urlqueries ={0};
+    
+    while(decoded_query[0]){
+        char *name = calloc(1,MAX_URL_QUERY_DATA);
+        char *value = calloc(1,MAX_URL_QUERY_DATA);
+        while(decoded_query[0] and decoded_query[0]!='='){
+            name[copy_ptr++] = decoded_query[0];
+            decoded_query++;
+        }
+        if(decoded_query[0])
+            decoded_query++;//consume '='
+        copy_ptr = 0;
+        while(decoded_query[0] and decoded_query[0]!='&'){
+            value[copy_ptr++] = decoded_query[0];
+            decoded_query++;
+        }
+        if(decoded_query[0])
+            decoded_query++;//consume '&'
+        copy_ptr = 0;
+        urlqueries.queries[urlqueries.length].name = name;
+        urlqueries.queries[urlqueries.length].value = value;
+        urlqueries.length++;
+    }
+    return urlqueries;
+}
+
 
 
 void redirect(Request request,char *to_url,uint16_t redirect_code){

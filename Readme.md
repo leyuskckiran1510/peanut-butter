@@ -14,7 +14,7 @@ web with speed out of the box.
         the template varibale is left
     - [completed][2024-Aug-07:23-11-33 PM]
 5. Redirect, [completed] [2024-Aug-07:23-11-17 PM]
-6. urlencoded_parse [to work on]
+6. urlquery_parse [completed] [2024-Aug-08]
 
 
 # Features To add

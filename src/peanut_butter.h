@@ -2,8 +2,11 @@
     #define __PEANUT_BUTTER__
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #define MAX_ROUTES 1024
+#define MAX_CONNECTION_AT_A_TIME 500
+#define MAX_QUERIES 50
 #define PB(x)  _pb_##x
 #include "../include/civetweb.h"
 
@@ -117,8 +120,19 @@ typedef struct {
     unsigned int count;
 }Routes;
 
+typedef struct{
+    char *name;
+    char *value;
+}UrlQuery;
+
+typedef struct{
+    UrlQuery queries[MAX_QUERIES];
+    uint16_t length;
+}UrlQueries;
+
 static Routes ROUTE_TABLE;
 static Routes VAR_ROUTE_TABLE;
+
 
 const char * get_method(Request request);
 void PB(add_route(char* route,ViewCallback callback));
@@ -128,8 +142,7 @@ void PB(add_var_route(char*  var_route,ViewCallbackArgs callback));
 int server_run(char *port);
 void render_html(Request request,const char* file_name);
 void render_template(Request request,const char* file_name,TemplateVars templ_vars);
-int count_fmt_args(const char *fmt_url);
 void redirect(Request request,char *to_url,uint16_t redirect_code);
-UrlVariables find_if_match(const char* og_url,const char *url);
-
+UrlQueries parse_query(Request request);
+void free_url_query(UrlQueries quires);
 #endif
