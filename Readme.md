@@ -28,8 +28,7 @@ web with speed out of the box.
 
 # Technology and Software in Use
 1. [civetweb](https://github.com/civetweb/civetweb)
-    1. [Building Civetweb](./lib/Readme)
-
+    1. [Building Civetweb](./lib/README.md)
 
 
 
