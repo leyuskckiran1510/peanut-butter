@@ -18,7 +18,7 @@
 Aim of this project to build a miniframework to get started with the 
 web with speed out of the box.
     <br />
-    <a href="./docs/readme.md"><strong>Explore the docs »</strong></a>
+    <a href="./docs/Readme.md"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://youtu.be/unknown">View Demo</a>
