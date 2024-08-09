@@ -1,6 +1,34 @@
-# Simple miniframework for web-backend 
+<a name="readme-top"></a>
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]
+
+<br />
+<div align="center">
+  <a href="https://github.com/leyuskckiran1510/peanut-butter">
+    <img src="logo/logo_light_200.png" alt="Logo" width="80" height="80">
+  </a>
+
+  <h1 align="center">peanut-butter</h1>
+  <p align="center">
+   Simple miniframework for web-backend 
 Aim of this project to build a miniframework to get started with the 
 web with speed out of the box.
+    <br />
+    <a href="./docs/readme.md"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://youtu.be/unknown">View Demo</a>
+    ·
+    <a href="https://github.com/leyuskckiran1510/peanut-butter/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/leyuskckiran1510/peanut-butter/issues">Request Feature</a>
+  </p>
+</div>
+
 
 
 # Features
@@ -15,12 +43,12 @@ web with speed out of the box.
     - [completed][2024-Aug-07:23-11-33 PM]
 5. Redirect, [completed] [2024-Aug-07:23-11-17 PM]
 6. urlquery_parse [completed] [2024-Aug-08]
-
+7. A good logo 
 
 # Features To add
 1. Middlewares
 2. Authentications
-3. Persestent datas like Cookies and Sessions,
+3. Persistent datas like Cookies and Sessions,
 4. RateLimiting
 5. HTTPS/test/support
 6. Parse Post forms/urls
@@ -50,9 +78,9 @@ web with speed out of the box.
 void home(Request request){
     const char *method = get_method(request);
     if(!strcmp("GET",method)){
-        return render_html(request,"htmls/index.html");
+        return render_html(request,"/htmls/index.html");
     }
-    return render_html(request,"htmls/method_not_allowed.html");
+    return render_html(request,"/htmls/method_not_allowed.html");
 }
 
 void about(Request request){
@@ -60,27 +88,32 @@ void about(Request request){
 }
 
 void user_home(Request request,UrlVariables urlags){
-    char secrete = 'k';
-    // this is bad way to validate admins, 
-    // this is just a fun example
-    if(urlags.args[0].value==0 && urlags.args[1].value == secrete){
-        log_info("Admin name is %s",urlags.args[2].value_string);
-        return render_html(request,"htmls/admin.html");
+    TEMP_INIT();
+    if(urlags.args[0].value==123){
+        UrlQueries quires = parse_query(request);
+        for (int i = 0; i < quires.length; ++i){
+            TEMP_VAL(quires.queries[i].name,quires.queries[i].value,s);
+        }
+        render_template(request,"htmls/template.html",TEMP_VAR());
+        return  free_url_query(quires);
     }
-    return render_html(request,"htmls/index.html");
+    if(urlags.args[0].value<123){
+        return render_html(request,"htmls/index.html");
+    }
+    return redirect(request,"/",302);;
 }
+
 
 int server(){
     URL("/",home);
     URL("/about",about);
-    VAR_URL("/%d/%c/%s/home",user_home);
+    VAR_URL("/%d/%d/%s/home",user_home);
     return server_run("8080");
 }
 
 int main(void){
     return server();
 }
-
 ```
 
 
@@ -95,3 +128,21 @@ make
 
 
 # FAQ
+
+
+
+
+[contributors-shield]: https://img.shields.io/github/contributors/leyuskckiran1510/peanut-butter.svg?style=for-the-badge
+[contributors-url]: https://github.com/leyuskckiran1510/peanut-butter/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/leyuskckiran1510/peanut-butter.svg?style=for-the-badge
+[forks-url]: https://github.com/leyuskckiran1510/peanut-butter/network/members
+[stars-shield]: https://img.shields.io/github/stars/leyuskckiran1510/peanut-butter.svg?style=for-the-badge
+[stars-url]: https://github.com/leyuskckiran1510/peanut-butter/stargazers
+[issues-shield]: https://img.shields.io/github/issues/leyuskckiran1510/peanut-butter.svg?style=for-the-badge
+[issues-url]: https://github.com/leyuskckiran1510/peanut-butter/issues
+[license-shield]: https://img.shields.io/github/license/leyuskckiran1510/peanut-butter.svg?style=for-the-badge
+[license-url]: https://github.com/leyuskckiran1510/peanut-butter/blob/master/LICENSE.txt
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
+[linkedin-url]: https://linkedin.com/in/leyuskc
+[logo]: images/screenshot.png
+
