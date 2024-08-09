@@ -121,7 +121,7 @@ memcpy(url,"/xyz",6);
 # VIEW_CALLBACK
 <div id="view-callback">
 
-ViewCallback = func(Request [request](#request));
+> ViewCallback = func(Request [request](#request));
 
 ```c
 // ViewCallback are functions that take Request as first parameter
@@ -134,7 +134,7 @@ void about(Request req,int abc); // ❌ invalid
 # VIEW_CALLBACK_ARGS
 <div id="view-callback-args">
 
-ViewCallbackArgs =  func(Request [request](#request),UrlVariables [url_variables](#url-variables));
+> ViewCallbackArgs =  func(Request [request](#request),UrlVariables [url_variables](#url-variables));
 
 
 ```c
@@ -190,7 +190,60 @@ urlvar.length; // length is how many elements are their in args
 </div>
 
 # TEMPLATE
+>TemplateVar = {
+>    char *name;
+>    UrlVariable value;
+>}
+
+>TemplateVars = {
+>    TemplateVar *templ;
+>    uint8_t length;
+>} ;
 <div  id="template" >
+
+```c
+typedef struct{
+    char *name; // tempalte name
+    UrlVariable value; //template value, read UrlVaribale for more info
+}TemplateVar;
+
+typedef struct{
+    TemplateVar *templ; // list of TemplateVar, read above
+    uint8_t length; // total template count
+} TemplateVars;
+
+```
+- it has three main `macros`
+1. `TEMP_INIT()`:- this must be called before using templates
+2. `TEMP_VAL(template_name,template_value,template_type)`:-
+    1. [template_name](#string): a string
+    2. template_value : it can be any of these  data type,
+                        int,char,char*,float,double
+    3. template_type:- its a single character defining type of template_value
+            `s` -> `string/char*`
+            `i` -> `int`
+            `f` -> `float`
+            `d` -> `double`
+            `c` -> `char`
+
+            !! Note !! this is compile time constant, so 
+            it is not character/string, its a direct symbol
+            code example
+```c
+TEMP_VAL("name","Leyuskc",s);  // ✅ valid
+TEMP_VAL("name","Leyuskc",'s');  // ❌ invalid
+TEMP_VAL("name","Leyuskc","s");  // ❌ invalid
+```
+look at the `s` its like a expression it self not a value, so 
+template type should be determined during the compile time
+
+3. `TEMP_VAR()` :- invoke this macro where ever it calls for TemplateVars in your 
+                code, but remember to invoke `TEMP_INIT()` first.
+
+
+Any error will be detected during compile time and it will break. So don't worry about
+it slipping in production. The errors will look wired for now
+
 </div>
 
 # REQUESTS
