@@ -15,19 +15,18 @@ void about(Request request){
 }
 
 void user_home(Request request,UrlVariables urlags){
-    TEMP_INIT();
+    TEMPLATE_INIT();
     if(urlags.args[0].value==123){
-        UrlQueries quires = parse_query(request);
-        for (int i = 0; i < quires.length; ++i){
-            TEMP_VAL(quires.queries[i].name,quires.queries[i].value,s);
+        QUERY_INIT(request);
+        for (int i = 0; i < QUERY_LENGTH(); ++i){
+            TEMPLATE_ASSIGN(QUERY_INDEX(i).name,QUERY_INDEX(i).value,s);
         }
-        render_template(request,"htmls/template.html",TEMP_VAR());
-        return  free_url_query(quires);
+        return render_template(request,"htmls/template.html",TEMPLATE_VAR());;
     }
     if(urlags.args[0].value<123){
         return render_html(request,"htmls/index.html");
     }
-    return redirect(request,"/",302);;
+    return redirect(request,"/",302);
 }
 
 

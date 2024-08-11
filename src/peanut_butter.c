@@ -12,6 +12,7 @@
 #define URL_ARG_STRING_INCR_RATE 10
 #define MAX_READ_CHUNK 1024*3                  // 3kb
 #define MAX_URL_QUERY_DATA 100
+#define USER_DATA_CALLBACKS_AT_ONCE 10
 
 #define IS_SEP(x) ( ((x)=='/') || ((x)=='\\') )
 
@@ -38,6 +39,62 @@ void PB(add_var_route(char*  var_route,ViewCallbackArgs callback)){
     };
     VAR_ROUTE_TABLE.routes[VAR_ROUTE_TABLE.count] = route;
     VAR_ROUTE_TABLE.count++;
+}
+
+
+void free_url_query(void *v_quires){
+    UrlQueries *quires = v_quires;
+    if(quires==NULL){
+        return;
+    };
+    for (int i = 0; i < quires->length; ++i){
+        if(quires->queries[i].name!=NULL)
+            free(quires->queries[i].name);
+        if(quires->queries[i].value!=NULL)
+            free(quires->queries[i].value);
+    }
+}
+
+UserData * get_user_data(Request request){
+    UserData *udt = mg_get_user_connection_data(request);
+    if(udt==NULL){ 
+        UserData* data = calloc(sizeof(UserData),1);
+        data-> callback_pointers = calloc(sizeof(void *), USER_DATA_CALLBACKS_AT_ONCE);
+        data-> data_pointer = calloc(sizeof(void *), USER_DATA_CALLBACKS_AT_ONCE);
+        data-> count = 0;
+        udt = data;
+    }else{
+        // if userdata is already allocated, now
+        // increase the size if needed
+         int mutiplier = ((udt->count+1)/USER_DATA_CALLBACKS_AT_ONCE)+1; 
+         if(udt->count >= USER_DATA_CALLBACKS_AT_ONCE * mutiplier){
+               udt->callback_pointers = realloc(udt->callback_pointers,sizeof(void *) * USER_DATA_CALLBACKS_AT_ONCE * mutiplier);
+               udt->data_pointer = realloc(udt->data_pointer,sizeof(void *) * USER_DATA_CALLBACKS_AT_ONCE * mutiplier);
+         }
+    }
+    return  udt;
+}
+
+
+void query_track(Request request,UrlQueries *queries){
+    UserData *udt = get_user_data(request);
+    udt->data_pointer[udt->count] = queries;
+    udt->callback_pointers[udt->count++] = &free_url_query;
+    mg_set_user_connection_data(request,udt);
+}
+
+
+void free_per_request(const struct mg_connection * request){
+
+    UserData *udt = mg_get_user_connection_data(request);
+    if(udt==NULL) return;
+    for (int i = 0; i < udt->count; ++i){
+        udt->callback_pointers[i](udt->data_pointer[i]);
+    }
+
+    free(udt->callback_pointers);
+    free(udt->data_pointer);
+    free(udt);
 }
 
 
@@ -136,6 +193,8 @@ int print_able_range(char letter){
     // SPACE to ~
     return 32<=letter && letter<=126;
 }
+
+
 
 int consume_str(const char *str,UrlVariable *arg){
     char *new_str = calloc(URL_ARG_STRING_INCR_RATE,1);
@@ -293,7 +352,9 @@ void  free_template_var(TemplateVars templ_vars){
 
 static int begin_request_handler(struct mg_connection *conn){
     const struct mg_request_info *request_info = mg_get_request_info(conn);
+
     log_debug("New connection at %s",request_info->local_uri);
+
     // normal url search
     for (size_t i = 0; i < ROUTE_TABLE.count; ++i){
         if(!strcmp(request_info->local_uri,ROUTE_TABLE.routes[i].url)){
@@ -323,6 +384,7 @@ void render_html(Request request,const char* file_name){
         return;
     }
     log_error("Failed To Render %s",file_name);
+    return;
 }
 
 void render_text(Request request,const char * text){
@@ -333,6 +395,7 @@ void render_text(Request request,const char * text){
               "\r\n"
               "%s",
               strlen(text), text);
+    return  ;
 }
 
 int not_white_space(char c){
@@ -413,7 +476,7 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
     FILE *fp = fopen(file_name,"r");
     if( fp == NULL){
         log_error("Failed to open [%s] ",file_name);
-        return;
+        return  ;
     }
 
     // convert the unique memory address to unique file name
@@ -449,17 +512,11 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
     render_html(request,tmp_file_name);
     remove(tmp_file_name);
     free_template_var(templ_vars);
+    return  ;
 }
 
 
-void free_url_query(UrlQueries quires){
-    for (int i = 0; i < quires.length; ++i){
-        if(quires.queries[i].name!=NULL)
-            free(quires.queries[i].name);
-        if(quires.queries[i].value!=NULL)
-            free(quires.queries[i].value);
-    }
-}
+
 
 UrlQueries parse_query(Request request){
     UrlQueries urlqueries ={0};
@@ -499,12 +556,19 @@ UrlQueries parse_query(Request request){
 }
 
 
+char * query_search(UrlQueries url_queries,char *name,char *default_value){
+    for (uint16_t i = 0; i < url_queries.length; ++i){
+        if(!strcmp(name,url_queries.queries[i].name)) return url_queries.queries[i].value;
+    }
+    return default_value;
+}
+
 
 void redirect(Request request,char *to_url,uint16_t redirect_code){
     if(mg_send_http_redirect(request,to_url, redirect_code )<0){
         log_error("Failed Redirecting to url [%s](%d)",to_url,redirect_code);
     }
-    return ;
+    return  ;
 
 }
 
@@ -521,6 +585,7 @@ int server_run(char *port){
     const char *options[] = {"listening_ports", port, NULL};
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
+    callbacks.connection_close = free_per_request;
     ctx = mg_start(&callbacks, NULL, options);
     log_info("Server Running at localhost:%s ...",port);
     getchar();

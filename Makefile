@@ -8,7 +8,7 @@ LIBDIR = lib
 BUILDDIR = build
 BINDIR = bin
 
-_CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 -O3 
+_CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 -O3
 ifeq ($(OS),Windows_NT)
 CFLAGS = $(_CFLAGS)   -lws2_32 -DWIN32 
 CIVETWEB = civetwebwin.o

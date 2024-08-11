@@ -36,8 +36,8 @@
 
 #define MAX_TEMPL_VAR_NAME 30
 #define TEMPL_CHUNK 100
-#define TEMP_INIT() TemplateVars _tmpl_var = {.length=0,.templ=malloc(sizeof(TemplateVar)*TEMPL_CHUNK),};
-#define TEMP_VAL(_name,_avalue,_type) { \
+#define TEMPLATE_INIT() TemplateVars _tmpl_var = {.length=0,.templ=malloc(sizeof(TemplateVar)*TEMPL_CHUNK),};
+#define TEMPLATE_ASSIGN(_name,_avalue,_type) { \
                                 _tmpl_var.templ[_tmpl_var.length].name = _name;\
                                 _tmpl_var.templ[_tmpl_var.length].value._type##_value = _avalue;\
                                 _tmpl_var.templ[_tmpl_var.length].value.type =UAT_##_type;\
@@ -48,7 +48,15 @@
                                  }\
                                 }\
 
-#define TEMP_VAR()   _tmpl_var
+#define TEMPLATE_VAR()   _tmpl_var
+
+
+#define QUERY_INIT(x)  UrlQueries __url_queries = parse_query( (x) );query_track((x),&__url_queries);
+#define QUERY_LENGTH() __url_queries.length
+#define QUERY_INDEX(index) __url_queries.queries[index]
+#define QUERY_VAR() __url_queries
+#define QUERY_GET(_name,default_value) query_search(QUERY_VAR(),_name,default_value);
+
 
 #define UrlVariable_TYPE(x,to)  switch (x){\
                         case 'd':to=UAT_INTEGER;break;\
@@ -104,7 +112,7 @@ typedef struct{
 typedef struct mg_connection *Request;
 typedef void (*ViewCallback) (Request request);
 typedef void (*ViewCallbackArgs) (Request request,UrlVariables url_variables);
-
+typedef void (*Callback) (void *);
 
 typedef struct{
     char *url;
@@ -130,6 +138,13 @@ typedef struct{
     uint16_t length;
 }UrlQueries;
 
+
+typedef struct{
+    Callback *callback_pointers;
+    void*    *data_pointer;
+    uint16_t count;
+}UserData;
+
 static Routes ROUTE_TABLE;
 static Routes VAR_ROUTE_TABLE;
 
@@ -143,10 +158,12 @@ int server_run(char *port);
 void render_html(Request request,const char* file_name);
 void render_template(Request request,const char* file_name,TemplateVars templ_vars);
 void redirect(Request request,char *to_url,uint16_t redirect_code);
+
 /*
 🟥🟥 Don't forget to call `free_url_query` after you have completed using the
 query
 */
 UrlQueries parse_query(Request request);
-void free_url_query(UrlQueries quires);
+char * query_search(UrlQueries url_queries,char *name,char *default_value);
+void query_track(Request request,UrlQueries *queries);
 #endif
