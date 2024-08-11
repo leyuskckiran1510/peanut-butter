@@ -462,15 +462,17 @@ void free_url_query(UrlQueries quires){
 }
 
 UrlQueries parse_query(Request request){
+    UrlQueries urlqueries ={0};
     const struct mg_request_info *request_info = mg_get_request_info(request);
     const char *query = request_info->query_string;
-
+    if(query==NULL){
+        return urlqueries;
+    }
     int query_len = strlen(query)+1;
     char *decoded_query = calloc(1,query_len);
     mg_url_decode(query,query_len,decoded_query,query_len,1);
     decoded_query[query_len-1]=0;
     int copy_ptr=0;
-    UrlQueries urlqueries ={0};
     
     while(decoded_query[0]){
         char *name = calloc(1,MAX_URL_QUERY_DATA);
