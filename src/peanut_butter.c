@@ -1,10 +1,16 @@
+#define LOG_LEVEL 2
+// standard headers
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "peanut_butter.h"
 #include <stdio.h>
 #include <string.h>
+
+// included headers
 #include "../include/civetweb.h"
+
+// costume headers
+#include "peanut_butter.h"
 #include "mime_map.h"
 
 #define MAX_SIZE 1024
@@ -379,7 +385,7 @@ static int begin_request_handler(struct mg_connection *conn){
     return !serve_file(conn,"htmls/404.html")?1:0;
 }
 
-void render_html(Request request,const char* file_name){
+void _render_html(Request request,const char* file_name){
     if(!serve_file(request,file_name)){
         return;
     }
@@ -387,7 +393,7 @@ void render_html(Request request,const char* file_name){
     return;
 }
 
-void render_text(Request request,const char * text){
+void _render_text(Request request,const char * text){
     mg_printf(request,
               "HTTP/1.1 200 OK\r\n"
               "Content-Type: text/html\r\n"
@@ -470,7 +476,7 @@ int apply_template(char *from,char *to,int *write_count,TemplateVars templ_vars)
     return from_ptr;
 }
 
-void render_template(Request request,const char* file_name,TemplateVars templ_vars){
+void _render_template(Request request,const char* file_name,TemplateVars templ_vars){
     FILE *tmp_fp;
 
     FILE *fp = fopen(file_name,"r");
@@ -509,7 +515,7 @@ void render_template(Request request,const char* file_name,TemplateVars templ_va
     fclose(fp);
     fclose(tmp_fp);
     log_debug("Serving Template file... [%s]",tmp_file_name);
-    render_html(request,tmp_file_name);
+    _render_html(request,tmp_file_name);
     remove(tmp_file_name);
     free_template_var(templ_vars);
     return  ;
@@ -564,7 +570,7 @@ char * query_search(UrlQueries url_queries,char *name,char *default_value){
 }
 
 
-void redirect(Request request,char *to_url,uint16_t redirect_code){
+void _redirect(Request request,char *to_url,uint16_t redirect_code){
     if(mg_send_http_redirect(request,to_url, redirect_code )<0){
         log_error("Failed Redirecting to url [%s](%d)",to_url,redirect_code);
     }
@@ -574,7 +580,7 @@ void redirect(Request request,char *to_url,uint16_t redirect_code){
 
 
 
-const char * get_method(Request request){
+const char * _get_method(Request request){
     const struct mg_request_info *request_info = mg_get_request_info(request);
     return request_info->request_method;
 };

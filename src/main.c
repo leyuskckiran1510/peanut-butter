@@ -1,4 +1,6 @@
+#define LOG_LEVEL 4
 #include "peanut_butter.h"
+
 
 ROUTED(home){
     if(is_method("GET")){
