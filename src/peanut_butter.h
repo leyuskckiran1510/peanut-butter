@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #define MAX_ROUTES 1024
 #define MAX_CONNECTION_AT_A_TIME 500
 #define MAX_QUERIES 50
@@ -31,31 +32,47 @@
 #define log_warn(fmt,...)  log("WARN",fmt,##__VA_ARGS__);
 
 
+#define FUNC_TEMPLATE_VAR_NAME template_variable
+#define FUNC_REQ_PARAM_NAME request
+#define FUNC_UVAR_PARAM_NAME urlvariable
+
 #define URL(route,callback)  PB(add_route(route,&callback));
 #define VAR_URL(var_route,callback)  PB(add_var_route(var_route,&callback));
 
+#define ROUTED(func_name)   void func_name(Request FUNC_REQ_PARAM_NAME)
+#define URL_VAR_ROUTED(func_name)   void func_name(Request FUNC_REQ_PARAM_NAME, UrlVariables FUNC_UVAR_PARAM_NAME)
+
+
+
 #define MAX_TEMPL_VAR_NAME 30
 #define TEMPL_CHUNK 100
-#define TEMPLATE_INIT() TemplateVars _tmpl_var = {.length=0,.templ=malloc(sizeof(TemplateVar)*TEMPL_CHUNK),};
+
+
+#define TEMPLATE_INIT() TemplateVars FUNC_TEMPLATE_VAR_NAME  = {.length=0,.templ=malloc(sizeof(TemplateVar)*TEMPL_CHUNK),};
 #define TEMPLATE_ASSIGN(_name,_avalue,_type) { \
-                                _tmpl_var.templ[_tmpl_var.length].name = _name;\
-                                _tmpl_var.templ[_tmpl_var.length].value._type##_value = _avalue;\
-                                _tmpl_var.templ[_tmpl_var.length].value.type =UAT_##_type;\
-                                _tmpl_var.length++; \
-                                 int mutiplier = (_tmpl_var.length/TEMPL_CHUNK)+1; \
-                                 if(_tmpl_var.length >= TEMPL_CHUNK*mutiplier){\
-                                       _tmpl_var.templ =realloc(_tmpl_var.templ,sizeof(TemplateVar)*TEMPL_CHUNK*mutiplier);\
+                                FUNC_TEMPLATE_VAR_NAME .templ[FUNC_TEMPLATE_VAR_NAME .length].name = _name;\
+                                FUNC_TEMPLATE_VAR_NAME .templ[FUNC_TEMPLATE_VAR_NAME .length].value._type##_value = _avalue;\
+                                FUNC_TEMPLATE_VAR_NAME .templ[FUNC_TEMPLATE_VAR_NAME .length].value.type =UAT_##_type;\
+                                FUNC_TEMPLATE_VAR_NAME .length++; \
+                                 int mutiplier = (FUNC_TEMPLATE_VAR_NAME .length/TEMPL_CHUNK)+1; \
+                                 if(FUNC_TEMPLATE_VAR_NAME .length >= TEMPL_CHUNK*mutiplier){\
+                                       FUNC_TEMPLATE_VAR_NAME .templ =realloc(FUNC_TEMPLATE_VAR_NAME .templ,sizeof(TemplateVar)*TEMPL_CHUNK*mutiplier);\
                                  }\
                                 }\
 
-#define TEMPLATE_VAR()   _tmpl_var
+#define TEMPLATE_VAR()   FUNC_TEMPLATE_VAR_NAME 
 
 
-#define QUERY_INIT(x)  UrlQueries __url_queries = parse_query( (x) );query_track((x),&__url_queries);
+
+#define QUERY_INIT()  UrlQueries __url_queries = parse_query( (FUNC_REQ_PARAM_NAME) );\
+                                query_track((FUNC_REQ_PARAM_NAME),&__url_queries);
+
 #define QUERY_LENGTH() __url_queries.length
 #define QUERY_INDEX(index) __url_queries.queries[index]
 #define QUERY_VAR() __url_queries
 #define QUERY_GET(_name,default_value) query_search(QUERY_VAR(),_name,default_value);
+
+#define URL_VAR_INDEX(index,__type) FUNC_UVAR_PARAM_NAME.args[index].__type##_value
 
 
 #define UrlVariable_TYPE(x,to)  switch (x){\
@@ -148,16 +165,24 @@ typedef struct{
 static Routes ROUTE_TABLE;
 static Routes VAR_ROUTE_TABLE;
 
+#define get_method() _get_method(FUNC_REQ_PARAM_NAME)
+const char * _get_method(Request request);
+#define is_method(method) (!strcmp(method,get_method()))
 
-const char * get_method(Request request);
 void PB(add_route(char* route,ViewCallback callback));
 void PB(add_var_route(char*  var_route,ViewCallbackArgs callback));
 
 
 int server_run(char *port);
-void render_html(Request request,const char* file_name);
-void render_template(Request request,const char* file_name,TemplateVars templ_vars);
-void redirect(Request request,char *to_url,uint16_t redirect_code);
+
+#define render_html(file_name) _render_html(FUNC_REQ_PARAM_NAME,(file_name))
+void _render_html(Request request,const char* file_name);
+
+#define render_template(file_name) _render_template(FUNC_REQ_PARAM_NAME,(file_name),FUNC_TEMPLATE_VAR_NAME)
+void _render_template(Request request,const char* file_name,TemplateVars templ_vars);
+
+#define redirect(file_name,redir_code) _redirect(FUNC_REQ_PARAM_NAME,(file_name),(redir_code))
+void _redirect(Request request,char *to_url,uint16_t redirect_code);
 
 /*
 🟥🟥 Don't forget to call `free_url_query` after you have completed using the

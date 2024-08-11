@@ -1,32 +1,31 @@
-#include <string.h>
 #include "peanut_butter.h"
 
-
-void home(Request request){
-    const char *method = get_method(request);
-    if(!strcmp("GET",method)){
-        return render_html(request,"/htmls/index.html");
+ROUTED(home){
+    if(is_method("GET")){
+        return render_html("/htmls/index.html");
     }
-    return render_html(request,"/htmls/method_not_allowed.html");
+    return render_html("/htmls/method_not_allowed.html");
 }
 
-void about(Request request){
-    return render_html(request,"htmls/about.html");
+
+ROUTED(about){
+    return render_html("htmls/about.html");
 }
 
-void user_home(Request request,UrlVariables urlags){
+
+URL_VAR_ROUTED(user_home){    
     TEMPLATE_INIT();
-    if(urlags.args[0].value==123){
-        QUERY_INIT(request);
+    if(URL_VAR_INDEX(0,d)==123){
+        QUERY_INIT();
         for (int i = 0; i < QUERY_LENGTH(); ++i){
             TEMPLATE_ASSIGN(QUERY_INDEX(i).name,QUERY_INDEX(i).value,s);
         }
-        return render_template(request,"htmls/template.html",TEMPLATE_VAR());;
+        return render_template("htmls/template.html");;
     }
-    if(urlags.args[0].value<123){
-        return render_html(request,"htmls/index.html");
+    if(URL_VAR_INDEX(0,d) < 123){
+        return render_html("htmls/index.html");
     }
-    return redirect(request,"/",302);
+    return redirect("/",302);
 }
 
 
