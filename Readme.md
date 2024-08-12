@@ -21,7 +21,7 @@ web with speed out of the box.
     <a href="./docs/Readme.md"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://youtu.be/unknown">View Demo</a>
+    <a href="https://youtu.be/z0w43NbO0GM">View Demo</a>
     ·
     <a href="https://github.com/leyuskckiran1510/peanut-butter/issues">Report Bug</a>
     ·
