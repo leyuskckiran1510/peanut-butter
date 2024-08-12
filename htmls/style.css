@@ -13,10 +13,16 @@ h1 {
     color: #36d9ca;
     margin: 0;
 }
+h3{
+    font-size: 2em;
+    color: #36d9ca;
+    margin: 0;
+}
+
 .logo {
     margin-top: 20px; 
     width: 200px; 
-    height: auto; 
+    height: 200px; 
     background-image: url('/logo/logo_light_200.png'); 
     background-size: contain; 
     background-repeat: no-repeat; 

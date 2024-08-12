@@ -46,12 +46,12 @@ web with speed out of the box.
 7. A good logo 
 
 # Features To add
+0. Parse Post forms/urls
 1. Middlewares
 2. Authentications
 3. Persistent datas like Cookies and Sessions,
 4. RateLimiting
 5. HTTPS/test/support
-6. Parse Post forms/urls
  
 
 # Technology and Software in Use

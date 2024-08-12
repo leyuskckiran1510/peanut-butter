@@ -53,12 +53,14 @@ void free_url_query(void *v_quires){
     if(quires==NULL){
         return;
     };
+    
     for (int i = 0; i < quires->length; ++i){
         if(quires->queries[i].name!=NULL)
-            free(quires->queries[i].name);
+            free(quires->queries[i].name);   
         if(quires->queries[i].value!=NULL)
             free(quires->queries[i].value);
     }
+    free(quires);
 }
 
 UserData * get_user_data(Request request){
@@ -91,10 +93,10 @@ void query_track(Request request,UrlQueries *queries){
 
 
 void free_per_request(const struct mg_connection * request){
-
     UserData *udt = mg_get_user_connection_data(request);
     if(udt==NULL) return;
     for (int i = 0; i < udt->count; ++i){
+        UrlQueries *uq = udt->data_pointer[i];
         udt->callback_pointers[i](udt->data_pointer[i]);
     }
 
@@ -524,8 +526,8 @@ void _render_template(Request request,const char* file_name,TemplateVars templ_v
 
 
 
-UrlQueries parse_query(Request request){
-    UrlQueries urlqueries ={0};
+UrlQueries* parse_query(Request request){
+    UrlQueries * urlqueries =calloc(1,sizeof(UrlQueries));
     const struct mg_request_info *request_info = mg_get_request_info(request);
     const char *query = request_info->query_string;
     if(query==NULL){
@@ -554,17 +556,17 @@ UrlQueries parse_query(Request request){
         if(decoded_query[0])
             decoded_query++;//consume '&'
         copy_ptr = 0;
-        urlqueries.queries[urlqueries.length].name = name;
-        urlqueries.queries[urlqueries.length].value = value;
-        urlqueries.length++;
+        urlqueries->queries[urlqueries->length].name = name;
+        urlqueries->queries[urlqueries->length].value = value;
+        urlqueries->length++;
     }
     return urlqueries;
 }
 
 
-char * query_search(UrlQueries url_queries,char *name,char *default_value){
-    for (uint16_t i = 0; i < url_queries.length; ++i){
-        if(!strcmp(name,url_queries.queries[i].name)) return url_queries.queries[i].value;
+char * query_search(UrlQueries *url_queries,char *name,char *default_value){
+    for (uint16_t i = 0; i < url_queries->length; ++i){
+        if(!strcmp(name,url_queries->queries[i].name)) return url_queries->queries[i].value;
     }
     return default_value;
 }
@@ -578,12 +580,50 @@ void _redirect(Request request,char *to_url,uint16_t redirect_code){
 
 }
 
-
-
 const char * _get_method(Request request){
     const struct mg_request_info *request_info = mg_get_request_info(request);
     return request_info->request_method;
 };
+
+int field_found(const char *key,const char *filename,
+                char *path,size_t pathlen,void *user_data){
+    // TODO: Add file handeling if file was uploaded
+
+    return 0x1;
+}
+int field_get(const char *key, const char *value, size_t valuelen, void *user_data){
+    FormDatas *form_data = user_data;
+    char *_name =  calloc(1,MAX_URL_QUERY_DATA);
+    char *_value =  calloc(1,valuelen+1);
+    
+    memcpy(_name,key,strlen(key));
+    memcpy(_value,value,valuelen);
+    
+    form_data->queries[form_data->length].name = _name;
+    form_data->queries[form_data->length].value = _value;
+    form_data->length++;
+
+    return  MG_FORM_FIELD_HANDLE_NEXT;
+}
+int field_store(const char *path, long long file_size, void *user_data){
+    log_debug("path=%s,",path);
+    return MG_FORM_FIELD_HANDLE_NEXT;
+}
+
+
+FormDatas* parse_form(Request request,bool save_file_bool){
+    FormDatas *form_data = calloc(1,sizeof(FormDatas));
+    struct mg_form_data_handler fdh = {
+        .user_data = form_data,
+        .field_found = &field_found,
+        .field_get = &field_get,
+        .field_store = &field_store,
+    };
+    int total = mg_handle_form_request(request,&fdh);
+    return  form_data;
+}
+
+
 
 int server_run(char *port){
     struct mg_context *ctx;

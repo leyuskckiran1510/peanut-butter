@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "../include/civetweb.h"
 #include "logger.h"
 
@@ -18,9 +19,10 @@
 #define free(x)  {free(x);x=NULL;}
 
 
-#define FUNC_TEMPLATE_VAR_NAME template_variable
-#define FUNC_REQ_PARAM_NAME request
-#define FUNC_UVAR_PARAM_NAME urlvariable
+#define FUNC_TEMPLATE_VAR_NAME __template_variable
+#define FUNC_REQ_PARAM_NAME __request_param
+#define FUNC_UVAR_PARAM_NAME __urlvariable_param
+#define FUNC_QUERY_VAR_NAME __urlquery_var
 
 #define URL(route,callback)          PB(add_route(route,&callback));
 #define VAR_URL(var_route,callback)  PB(add_var_route(var_route,&callback));
@@ -31,6 +33,7 @@
 
 
 #define TEMPLATE_INIT() TemplateVars FUNC_TEMPLATE_VAR_NAME  = {.length=0,.templ=malloc(sizeof(TemplateVar)*TEMPL_CHUNK),};
+#define TEMPLATE_VAR()   FUNC_TEMPLATE_VAR_NAME 
 #define TEMPLATE_ASSIGN(_name,_avalue,_type) { \
                                 FUNC_TEMPLATE_VAR_NAME .templ[FUNC_TEMPLATE_VAR_NAME .length].name = _name;\
                                 FUNC_TEMPLATE_VAR_NAME .templ[FUNC_TEMPLATE_VAR_NAME .length].value._type##_value = _avalue;\
@@ -42,21 +45,27 @@
                                  }\
                                 }\
 
-#define TEMPLATE_VAR()   FUNC_TEMPLATE_VAR_NAME 
 
 
 
-#define QUERY_INIT()  UrlQueries __url_queries = parse_query( (FUNC_REQ_PARAM_NAME) );\
-                                query_track((FUNC_REQ_PARAM_NAME),&__url_queries);
+#define QUERY_INIT()  UrlQueries* FUNC_QUERY_VAR_NAME = parse_query( (FUNC_REQ_PARAM_NAME) );\
+                                query_track((FUNC_REQ_PARAM_NAME),FUNC_QUERY_VAR_NAME);
 
-#define QUERY_LENGTH() __url_queries.length
-#define QUERY_INDEX(index) __url_queries.queries[index]
-#define QUERY_VAR() __url_queries
-#define QUERY_GET(_name,default_value) query_search(QUERY_VAR(),_name,default_value);
+#define QUERY_VAR() FUNC_QUERY_VAR_NAME
+#define QUERY_LENGTH() FUNC_QUERY_VAR_NAME->length
+#define QUERY_INDEX(index) FUNC_QUERY_VAR_NAME->queries[index]
+#define QUERY_GET(name,default_value) query_search(QUERY_VAR(),name,default_value)
 
+#define FORM_INIT(save_file_bool) FormDatas*  FUNC_QUERY_VAR_NAME = parse_form( (FUNC_REQ_PARAM_NAME),(save_file_bool));\
+                                    query_track((FUNC_REQ_PARAM_NAME),FUNC_QUERY_VAR_NAME);
+#define FORM_VAR() QUERY_VAR()
+#define FORM_LENGTH()  QUERY_LENGTH()
+#define FORM_INDEX(index) QUERY_INDEX(index)
+#define FORM_GET(name,default_value) QUERY_GET(name,default_value)
+
+
+#define INIT_URL_ARGS()    {.args=NULL,.length=0}
 #define URL_VAR_INDEX(index,__type) FUNC_UVAR_PARAM_NAME.args[index].__type##_value
-
-
 #define UrlVariable_TYPE(x,to)  switch (x){\
                         case 'd':to=UAT_INTEGER;break;\
                         case 'c':to=UAT_CHARACTER;break;\
@@ -66,14 +75,13 @@
                         default:to=UAT_UNKNOWN;break;\
                         }\
 
-#define INIT_URL_ARGS()    {.args=NULL,.length=0}
                         
 #define get_method() _get_method(FUNC_REQ_PARAM_NAME)
 #define is_method(method) (!strcmp(method,get_method()))
 #define render_html(file_name) _render_html(FUNC_REQ_PARAM_NAME,(file_name))
 #define render_text(text) _render_html(FUNC_REQ_PARAM_NAME,(text))
 #define render_template(file_name) _render_template(FUNC_REQ_PARAM_NAME,(file_name),FUNC_TEMPLATE_VAR_NAME)
-#define redirect(file_name,redir_code) _redirect(FUNC_REQ_PARAM_NAME,(file_name),(redir_code))
+#define redirect(route,redir_code) _redirect(FUNC_REQ_PARAM_NAME,(route),(redir_code))
 
 
 typedef enum {
@@ -139,12 +147,12 @@ typedef struct {
 typedef struct{
     char *name;
     char *value;
-}UrlQuery;
+}UrlQuery,FormData;
 
 typedef struct{
-    UrlQuery queries[MAX_QUERIES];
+    FormData queries[MAX_QUERIES];
     uint16_t length;
-}UrlQueries;
+}UrlQueries,FormDatas;
 
 
 typedef struct{
@@ -178,9 +186,10 @@ void _redirect(Request request,char *to_url,uint16_t redirect_code);
 🟥🟥 Don't forget to call `free_url_query` after you have completed using the
 query
 */
-UrlQueries parse_query(Request request);
+UrlQueries* parse_query(Request request);
+FormDatas* parse_form(Request request,bool save_file_bool);
 
-char * query_search(UrlQueries url_queries,char *name,char *default_value);
+char * query_search(UrlQueries *url_queries,char *name,char *default_value);
 
 void query_track(Request request,UrlQueries *queries);
 

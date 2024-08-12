@@ -1,6 +1,7 @@
-#include <string.h>
 #define LOG_LEVEL 4
+#include <string.h>
 #include "peanut_butter.h"
+#include "logger.h"
 
 ROUTED(home){
     if(is_method("GET")){
@@ -49,9 +50,26 @@ URL_VAR_ROUTED(contact){
 }
 
 
+
+ROUTED(forms){
+    if(is_method("GET")){
+        return render_html("htmls/forms.html");
+    }
+    else if (is_method("POST")){
+        FORM_INIT(false);
+        log_debug("1. { text-input1, %s} ", FORM_GET("text-input1","default_value1"));
+        log_debug("2. { text-input2, %s} ", FORM_GET("text-input2","default_value2"));
+        log_debug("3. { text-input3, %s} ", FORM_GET("text-input3","default_value3"));
+        log_debug("4. { text-input4, %s} ", FORM_GET("text-input4","default_value4"));
+        log_debug("5. { text-input5, %s} ", FORM_GET("text-input5","default_value5"));
+    }
+    return redirect("/forms",302);
+}
+
 int server(){
     URL("/",home);
     URL("/about",about);
+    URL("/forms",forms);
     VAR_URL("/%d/home",user_home);
     VAR_URL("/%s/contact",contact);
     return server_run("8080");
