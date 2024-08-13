@@ -90,14 +90,14 @@ ROUTED(about){
 
 URL_VAR_ROUTED(user_home){    
     TEMPLATE_INIT();
-    if(URL_VAR_INDEX(0,d)==123){
+    if(URL_VAR_INDEX(0,i)==123){
         QUERY_INIT();
         for (int i = 0; i < QUERY_LENGTH(); ++i){
             TEMPLATE_ASSIGN(QUERY_INDEX(i).name,QUERY_INDEX(i).value,s);
         }
         return render_template("htmls/template.html");;
     }
-    if(URL_VAR_INDEX(0,d) < 123){
+    if(URL_VAR_INDEX(0,i) < 123){
         return render_html("htmls/index.html");
     }
     return redirect("/",302);
