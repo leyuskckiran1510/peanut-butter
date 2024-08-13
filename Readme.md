@@ -44,9 +44,10 @@ web with speed out of the box.
 5. Redirect, [completed] [2024-Aug-07:23-11-17 PM]
 6. urlquery_parse [completed] [2024-Aug-08]
 7. A good logo 
+8. Parse Post forms/urls, [readthis](https://www.rfc-editor.org/rfc/rfc2616#section-9.5)
+        and fix the `civetweb` and make PR, [2024-Aug-13:23-11-03 PM]
 
 # Features To add
-0. Parse Post forms/urls
 1. Middlewares
 2. Authentications
 3. Persistent datas like Cookies and Sessions,

@@ -1,4 +1,5 @@
 #define LOG_LEVEL 2
+#include "logger.h"
 // standard headers
 #include <stdint.h>
 #include <stdio.h>
@@ -588,8 +589,12 @@ const char * _get_method(Request request){
 int field_found(const char *key,const char *filename,
                 char *path,size_t pathlen,void *user_data){
     // TODO: Add file handeling if file was uploaded
-
-    return 0x1;
+    path = calloc(1,20); 
+    const char *ch = "test.jpg";
+    strcpy(path,ch);
+    pathlen = 20;
+    log_debug("|| => key=%s, filename=%s <= ||",key,filename);
+    return  MG_FORM_FIELD_STORAGE_STORE;
 }
 int field_get(const char *key, const char *value, size_t valuelen, void *user_data){
     FormDatas *form_data = user_data;
@@ -606,7 +611,7 @@ int field_get(const char *key, const char *value, size_t valuelen, void *user_da
     return  MG_FORM_FIELD_HANDLE_NEXT;
 }
 int field_store(const char *path, long long file_size, void *user_data){
-    log_debug("path=%s,",path);
+    log_debug(" ||=> path=%s,<=|| ",path);
     return MG_FORM_FIELD_HANDLE_NEXT;
 }
 
@@ -623,6 +628,12 @@ FormDatas* parse_form(Request request,bool save_file_bool){
     return  form_data;
 }
 
+int log_message(const struct mg_connection* req,const char *log){
+    log_debug("%s",log);
+    return 1;
+}
+
+
 
 
 int server_run(char *port){
@@ -632,6 +643,7 @@ int server_run(char *port){
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
     callbacks.connection_close = free_per_request;
+    callbacks.log_message = log_message;
     ctx = mg_start(&callbacks, NULL, options);
     log_info("Server Running at localhost:%s ...",port);
     getchar();
