@@ -46,6 +46,7 @@ web with speed out of the box.
 7. A good logo 
 8. Parse Post forms/urls, [readthis](https://www.rfc-editor.org/rfc/rfc2616#section-9.5)
         and fix the `civetweb` and make PR, [2024-Aug-13:23-11-03 PM]
+        [ I didnot know about the standard of file upload ]
 
 # Features To add
 1. Middlewares

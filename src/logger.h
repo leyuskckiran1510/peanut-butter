@@ -5,7 +5,7 @@
     #define LOG_LEVEL 0
 #endif
 
-#define log(type,fmt,... ) printf( "[%5s] %s:%6d | " fmt"\n",type,__FILE__,__LINE__, ##__VA_ARGS__ );
+#define log(type,fmt,... ) printf( "[%5s] %s:%6d | " fmt"\n", type,__FILE__,__LINE__, ##__VA_ARGS__ );
 #define log_info(fmt,...)  ;
 #define log_debug(fmt,...) ;
 #define log_warn(fmt,...)  ;

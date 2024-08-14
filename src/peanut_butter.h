@@ -15,6 +15,14 @@
 #define MAX_TEMPL_VAR_NAME 30
 #define TEMPL_CHUNK 100
 
+#ifdef _WIN32
+  #define OS_PATH_SEP "\\" 
+#else
+  #define OS_PATH_SEP "/"
+#endif
+
+#define TEMP_FOLDER_PREFIX "user_upload_"
+
 #define PB(x)  _pb_##x
 #define free(x)  {free(x);x=NULL;}
 
@@ -161,9 +169,10 @@ typedef struct{
     uint16_t count;
 }UserData;
 
-static Routes ROUTE_TABLE;
-static Routes VAR_ROUTE_TABLE;
-
+#ifdef __PB_DOT_C__
+    static Routes ROUTE_TABLE;
+    static Routes VAR_ROUTE_TABLE;
+#endif
 
 const char * _get_method(Request request);
 

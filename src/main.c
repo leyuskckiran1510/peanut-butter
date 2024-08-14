@@ -57,8 +57,8 @@ ROUTED(forms){
     }
     else if (is_method("POST")){
         FORM_INIT(false);
-        log_debug("1. { text-input1, %s} ", FORM_GET("text-input1","default_value1"));
-        log_debug("2. { text-input2, %s} ", FORM_GET("resume","no-resume"));
+        log_debug("1. { text, %s} ", FORM_GET("text-input1","default_value1"));
+        log_debug("2. { filename, %s} ", FORM_GET("resume",NULL));
     }
     return redirect("/forms",302);
 }

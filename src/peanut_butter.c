@@ -1,4 +1,5 @@
-#define LOG_LEVEL 2
+#define __PB_DOT_C__
+#define LOG_LEVEL 4
 #include "logger.h"
 // standard headers
 #include <stdint.h>
@@ -6,7 +7,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
+ #include <sys/stat.h>
+    
 // included headers
 #include "../include/civetweb.h"
 
@@ -97,7 +99,6 @@ void free_per_request(const struct mg_connection * request){
     UserData *udt = mg_get_user_connection_data(request);
     if(udt==NULL) return;
     for (int i = 0; i < udt->count; ++i){
-        UrlQueries *uq = udt->data_pointer[i];
         udt->callback_pointers[i](udt->data_pointer[i]);
     }
 
@@ -504,7 +505,7 @@ void _render_template(Request request,const char* file_name,TemplateVars templ_v
     char write_chunk[MAX_READ_CHUNK];
     int write_count=0;
 
-    int ptr = 0,continue_from=0,read_buff_offset=0;
+    int continue_from=0,read_buff_offset=0;
     while(!feof(fp)){
         // try to read whole chunk like a single object
         int read_count = fread((read_chunk+read_buff_offset),1,MAX_READ_CHUNK-read_buff_offset-1,fp);
@@ -566,10 +567,14 @@ UrlQueries* parse_query(Request request){
 
 
 char * query_search(UrlQueries *url_queries,char *name,char *default_value){
+    uint16_t name_len = strlen(name);
+    //compare with user input name, as file_name ends with "\n"
     for (uint16_t i = 0; i < url_queries->length; ++i){
-        if(!strcmp(name,url_queries->queries[i].name)) return url_queries->queries[i].value;
+        if(!strncmp(name,url_queries->queries[i].name,name_len)){
+            return url_queries->queries[i].value;
+        }
     }
-    return default_value;
+    return  default_value;
 }
 
 
@@ -586,38 +591,67 @@ const char * _get_method(Request request){
     return request_info->request_method;
 };
 
-int field_found(const char *key,const char *filename,
-                char *path,size_t pathlen,void *user_data){
-    // TODO: Add file handeling if file was uploaded
-    path = calloc(1,20); 
-    const char *ch = "test.jpg";
-    strcpy(path,ch);
-    pathlen = 20;
-    log_debug("|| => key=%s, filename=%s <= ||",key,filename);
-    return  MG_FORM_FIELD_STORAGE_STORE;
-}
-int field_get(const char *key, const char *value, size_t valuelen, void *user_data){
-    FormDatas *form_data = user_data;
+void store_in_form_data(FormDatas *form_data,const char *key,const char *value,int valuelen,bool is_file){
+    
+    size_t keylen = strlen(key);
+
     char *_name =  calloc(1,MAX_URL_QUERY_DATA);
     char *_value =  calloc(1,valuelen+1);
     
-    memcpy(_name,key,strlen(key));
+    memcpy(_name,key,keylen);
+    
+    if(is_file)
+        *(_name+keylen) = 10; // newline as we cannot put \n in key value
+
     memcpy(_value,value,valuelen);
     
     form_data->queries[form_data->length].name = _name;
     form_data->queries[form_data->length].value = _value;
     form_data->length++;
+}
 
+
+int field_found(const char *key,const char *filename,
+                char *path,size_t pathlen,void *user_data){
+    
+    if(filename[0]){
+        FormDatas *fd = user_data;
+        char folder_path[25];
+        sprintf(folder_path,TEMP_FOLDER_PREFIX"%p",fd->queries[0].value);
+        mkdir(folder_path,0777);
+        sprintf(path,"%s"OS_PATH_SEP"%s",folder_path,filename);
+        store_in_form_data(user_data,key,path,pathlen,true);
+        return  MG_FORM_FIELD_STORAGE_STORE;
+    }
+    
+    (void)pathlen;
+    (void)key;
+    (void)user_data;
+    
+    return MG_FORM_FIELD_STORAGE_GET;
+}
+
+
+
+int field_get(const char *key, const char *value, size_t valuelen, void *user_data){
+    FormDatas *form_data = user_data;
+    store_in_form_data(form_data,key,value,valuelen,false);
+    (void)user_data;
     return  MG_FORM_FIELD_HANDLE_NEXT;
 }
 int field_store(const char *path, long long file_size, void *user_data){
-    log_debug(" ||=> path=%s,<=|| ",path);
+    (void)file_size;
+    (void)user_data;
     return MG_FORM_FIELD_HANDLE_NEXT;
 }
 
 
 FormDatas* parse_form(Request request,bool save_file_bool){
+    (void)save_file_bool;
     FormDatas *form_data = calloc(1,sizeof(FormDatas));
+    form_data->queries[0].name = "__request_pointer";
+    form_data->queries[0].value = (char *) request;
+    form_data->length=1;
     struct mg_form_data_handler fdh = {
         .user_data = form_data,
         .field_found = &field_found,
@@ -625,10 +659,13 @@ FormDatas* parse_form(Request request,bool save_file_bool){
         .field_store = &field_store,
     };
     int total = mg_handle_form_request(request,&fdh);
+    (void)total;
     return  form_data;
 }
 
 int log_message(const struct mg_connection* req,const char *log){
+    //to aovid unused varibale warning
+    (void)req;
     log_debug("%s",log);
     return 1;
 }
@@ -645,7 +682,7 @@ int server_run(char *port){
     callbacks.connection_close = free_per_request;
     callbacks.log_message = log_message;
     ctx = mg_start(&callbacks, NULL, options);
-    log_info("Server Running at localhost:%s ...",port);
+    log_info("Server Running at http://localhost:%s ...",port);
     getchar();
     log_info("Server Stoped ");
     log_info("Exiting ... ");
