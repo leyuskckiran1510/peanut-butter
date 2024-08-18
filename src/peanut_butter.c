@@ -7,7 +7,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
- #include <sys/stat.h>
+#include <sys/stat.h>
+#include <errno.h>
     
 // included headers
 #include "../include/civetweb.h"
@@ -58,8 +59,13 @@ void free_url_query(void *v_quires){
     };
     
     for (int i = 0; i < quires->length; ++i){
+        // queries starting with '_' are private pointers
+        // so who ever defines frees it, don't try to GC
+        if(quires->queries[i].name[0]=='_') continue;
+
         if(quires->queries[i].name!=NULL)
             free(quires->queries[i].name);   
+        
         if(quires->queries[i].value!=NULL)
             free(quires->queries[i].value);
     }
@@ -157,7 +163,7 @@ char * virtual_path_traverse(const char *file_path){
 }
 
 const char *get_mime_type(const char *file_path){
-    char *file_ext = malloc(10);
+    char file_ext[10];
     uint16_t path_ptr = 0,ext_ptr=0;
     while(file_path[path_ptr]!='.' && file_path[path_ptr]) path_ptr++;
     path_ptr++;//consume '.'
@@ -616,7 +622,7 @@ int field_found(const char *key,const char *filename,
     
     if(filename[0]){
         FormDatas *fd = user_data;
-        char folder_path[25];
+        char folder_path[36];
         sprintf(folder_path,TEMP_FOLDER_PREFIX"%p",fd->queries[0].value);
         mkdir(folder_path,0777);
         sprintf(path,"%s"OS_PATH_SEP"%s",folder_path,filename);
@@ -642,7 +648,15 @@ int field_get(const char *key, const char *value, size_t valuelen, void *user_da
 int field_store(const char *path, long long file_size, void *user_data){
     (void)file_size;
     (void)user_data;
-    return MG_FORM_FIELD_HANDLE_NEXT;
+    return MG_FORM_FIELD_HANDLE_ABORT;
+}
+
+void remove_folder(Request request){
+    char filename[25];
+    sprintf(filename,TEMP_FOLDER_PREFIX"%p",request);
+    if(!remove(filename))
+        return;
+    log_error("%s",strerror(errno));
 }
 
 
@@ -660,6 +674,9 @@ FormDatas* parse_form(Request request,bool save_file_bool){
     };
     int total = mg_handle_form_request(request,&fdh);
     (void)total;
+    // bring last element to first to override __Request_pointer
+    form_data->queries[0] = form_data->queries[form_data->length-1];
+    form_data->length--;
     return  form_data;
 }
 
@@ -676,14 +693,17 @@ int log_message(const struct mg_connection* req,const char *log){
 int server_run(char *port){
     struct mg_context *ctx;
     struct mg_callbacks callbacks;
+    // https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md#options-from-civetwebc
     const char *options[] = {"listening_ports", port, NULL};
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
     callbacks.connection_close = free_per_request;
     callbacks.log_message = log_message;
     ctx = mg_start(&callbacks, NULL, options);
-    log_info("Server Running at http://localhost:%s ...",port);
-    getchar();
+    if(ctx!=NULL){
+        log_info("Server Running at http://localhost:%s ...",port);
+        getchar();
+    }
     log_info("Server Stoped ");
     log_info("Exiting ... ");
     mg_stop(ctx);

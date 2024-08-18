@@ -4,7 +4,7 @@
 #include <string.h>
 
 
-#define CASE(M,X,Y)       if(!strcmp((M),(X)))return (Y);
+#define CASE(M,X,Y)       if(!strcmp((M),(X))) return (Y);
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
 #define MIME_TYPE_MATCH(file_ext) \
