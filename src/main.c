@@ -2,7 +2,6 @@
 #include <string.h>
 #include "peanut_butter.h"
 #include "logger.h"
-
 ROUTED(home){
     if(is_method("GET")){
         return render_html("/htmls/index.html");
@@ -58,7 +57,7 @@ ROUTED(forms){
     else if (is_method("POST")){
         FORM_INIT(false);
         log_debug("1. { text, %s} ", FORM_GET("text-input1","default_value1"));
-        log_debug("2. { filename, %s} ", FORM_GET("resume",NULL));
+        log_debug("2. { filename, %s} ", FORM_GET_FILE("resume"));
     }
     return redirect("/forms",302);
 }

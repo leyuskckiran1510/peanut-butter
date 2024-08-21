@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include "../include/civetweb.h"
 #include "logger.h"
+#include <errno.h>
+
 
 #define MAX_ROUTES 1024
 #define MAX_QUERIES 50
@@ -22,6 +24,9 @@
 #endif
 
 #define TEMP_FOLDER_PREFIX "user_upload_"
+#define TEMP_FOLDER_FMT(request)  TEMP_FOLDER_PREFIX"%p",request
+#define TEMP_TEMPL_FILE_PREFIX "pb_tmp_"
+#define MAX_TEMP_FOLDER_FILE_SIZE 35
 
 #define PB(x)  _pb_##x
 #define free(x)  {free(x);x=NULL;}
@@ -64,12 +69,14 @@
 #define QUERY_INDEX(index) FUNC_QUERY_VAR_NAME->queries[index]
 #define QUERY_GET(name,default_value) query_search(QUERY_VAR(),name,default_value)
 
+/*must have initialized form with FORM_INIT to use form*/ 
 #define FORM_INIT(save_file_bool) FormDatas*  FUNC_QUERY_VAR_NAME = parse_form( (FUNC_REQ_PARAM_NAME),(save_file_bool));\
                                     query_track((FUNC_REQ_PARAM_NAME),FUNC_QUERY_VAR_NAME);
 #define FORM_VAR() QUERY_VAR()
 #define FORM_LENGTH()  QUERY_LENGTH()
 #define FORM_INDEX(index) QUERY_INDEX(index)
 #define FORM_GET(name,default_value) QUERY_GET(name,default_value)
+#define FORM_GET_FILE(name)  query_file_search(QUERY_VAR(),name)
 
 
 #define INIT_URL_ARGS()    {.args=NULL,.length=0}
@@ -134,6 +141,7 @@ typedef struct{
 
 
 typedef struct mg_connection *Request;
+typedef const struct mg_connection *conRequest;
 typedef void (*ViewCallback) (Request request);
 typedef void (*ViewCallbackArgs) (Request request,UrlVariables url_variables);
 typedef void (*Callback) (void *);
@@ -199,6 +207,7 @@ UrlQueries* parse_query(Request request);
 FormDatas* parse_form(Request request,bool save_file_bool);
 
 char * query_search(UrlQueries *url_queries,char *name,char *default_value);
+char * query_file_search(UrlQueries *url_queries,char *name);
 
 void query_track(Request request,UrlQueries *queries);
 

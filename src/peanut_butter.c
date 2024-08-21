@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <errno.h>
     
 // included headers
 #include "../include/civetweb.h"
@@ -75,6 +74,7 @@ void free_url_query(void *v_quires){
 UserData * get_user_data(Request request){
     UserData *udt = mg_get_user_connection_data(request);
     if(udt==NULL){ 
+        log_debug("Allocating new UserData for request")
         UserData* data = calloc(sizeof(UserData),1);
         data-> callback_pointers = calloc(sizeof(void *), USER_DATA_CALLBACKS_AT_ONCE);
         data-> data_pointer = calloc(sizeof(void *), USER_DATA_CALLBACKS_AT_ONCE);
@@ -85,10 +85,12 @@ UserData * get_user_data(Request request){
         // increase the size if needed
          int mutiplier = ((udt->count+1)/USER_DATA_CALLBACKS_AT_ONCE)+1; 
          if(udt->count >= USER_DATA_CALLBACKS_AT_ONCE * mutiplier){
+                log_debug("Re-allocating additional UserData for request")
                udt->callback_pointers = realloc(udt->callback_pointers,sizeof(void *) * USER_DATA_CALLBACKS_AT_ONCE * mutiplier);
                udt->data_pointer = realloc(udt->data_pointer,sizeof(void *) * USER_DATA_CALLBACKS_AT_ONCE * mutiplier);
          }
     }
+    log_debug("Sucess.")
     return  udt;
 }
 
@@ -100,8 +102,15 @@ void query_track(Request request,UrlQueries *queries){
     mg_set_user_connection_data(request,udt);
 }
 
+void remove_temp_folder(conRequest request){
+    char foldername[MAX_TEMP_FOLDER_FILE_SIZE];
+    sprintf(foldername, TEMP_FOLDER_FMT(request));
+    if(remove(foldername)){
+        log_error("failed to remove temp folder (%s)\n\t=>%s",foldername,strerror(errno));
+    }
+}
 
-void free_per_request(const struct mg_connection * request){
+void free_per_request(conRequest  request){
     UserData *udt = mg_get_user_connection_data(request);
     if(udt==NULL) return;
     for (int i = 0; i < udt->count; ++i){
@@ -111,6 +120,7 @@ void free_per_request(const struct mg_connection * request){
     free(udt->callback_pointers);
     free(udt->data_pointer);
     free(udt);
+    remove_temp_folder(request);
 }
 
 
@@ -498,9 +508,9 @@ void _render_template(Request request,const char* file_name,TemplateVars templ_v
     // convert the unique memory address to unique file name
     size_t tmp_file_id = *(size_t  *)request;
     // max int has 10 digits for 32bit, and 20 digits for 64bits
-    // so to  cover it 35 will be enough
-    char tmp_file_name[35];
-    sprintf(tmp_file_name,"pb_tmp_%lu.html",tmp_file_id);
+    // so to  cover it MAX_TEMP_FOLDER_FILE_SIZE will be enough
+    char tmp_file_name[MAX_TEMP_FOLDER_FILE_SIZE];
+    sprintf(tmp_file_name,TEMP_TEMPL_FILE_PREFIX"%lu.html",tmp_file_id);
 
     tmp_fp = fopen(tmp_file_name,"w");
     if(tmp_fp == NULL){
@@ -572,11 +582,21 @@ UrlQueries* parse_query(Request request){
 }
 
 
-char * query_search(UrlQueries *url_queries,char *name,char *default_value){
+char * query_file_search(UrlQueries *url_queries,char *name){
     uint16_t name_len = strlen(name);
-    //compare with user input name, as file_name ends with "\n"
     for (uint16_t i = 0; i < url_queries->length; ++i){
-        if(!strncmp(name,url_queries->queries[i].name,name_len)){
+        //compare with user input name, as file_name ends with "\n"
+        if(!strncmp(name,url_queries->queries[i].name,name_len) 
+           and url_queries->queries[i].name[name_len]==10){ // it needs to end with \n
+            return url_queries->queries[i].value;
+        }
+    }
+    return  NULL;
+}
+
+char * query_search(UrlQueries *url_queries,char *name,char *default_value){
+    for (uint16_t i = 0; i < url_queries->length; ++i){
+        if(!strcmp(name,url_queries->queries[i].name)){
             return url_queries->queries[i].value;
         }
     }
@@ -622,8 +642,8 @@ int field_found(const char *key,const char *filename,
     
     if(filename[0]){
         FormDatas *fd = user_data;
-        char folder_path[36];
-        sprintf(folder_path,TEMP_FOLDER_PREFIX"%p",fd->queries[0].value);
+        char folder_path[MAX_TEMP_FOLDER_FILE_SIZE];
+        sprintf(folder_path, TEMP_FOLDER_FMT(fd->queries[0].value));
         mkdir(folder_path,0777);
         sprintf(path,"%s"OS_PATH_SEP"%s",folder_path,filename);
         store_in_form_data(user_data,key,path,pathlen,true);
@@ -633,7 +653,6 @@ int field_found(const char *key,const char *filename,
     (void)pathlen;
     (void)key;
     (void)user_data;
-    
     return MG_FORM_FIELD_STORAGE_GET;
 }
 
@@ -646,17 +665,26 @@ int field_get(const char *key, const char *value, size_t valuelen, void *user_da
     return  MG_FORM_FIELD_HANDLE_NEXT;
 }
 int field_store(const char *path, long long file_size, void *user_data){
+    (void) user_data;
     (void)file_size;
-    (void)user_data;
-    return MG_FORM_FIELD_HANDLE_ABORT;
+    return MG_FORM_FIELD_HANDLE_NEXT;
+   
 }
 
-void remove_folder(Request request){
-    char filename[25];
-    sprintf(filename,TEMP_FOLDER_PREFIX"%p",request);
-    if(!remove(filename))
-        return;
-    log_error("%s",strerror(errno));
+void remove_folder(void * blankpointer){
+    FormDatas *fd = blankpointer;
+    for (int i = 0; i < fd->length; ++i){
+        char *name=fd->queries[i].name;
+        uint16_t len = strlen(name);
+        if(name[len-1]==10){//last element of name has '\n'[10 in ascii]
+            if(remove(fd->queries[i].value)){
+                if (strcmp("No such file or directory",strerror(errno))){
+                    log_error("could not remove %s file from temp folder",fd->queries[i].value);
+                    log_error("%s",strerror(errno));
+                }
+            }
+        }
+    }
 }
 
 
@@ -672,15 +700,31 @@ FormDatas* parse_form(Request request,bool save_file_bool){
         .field_get = &field_get,
         .field_store = &field_store,
     };
+
+    if(!save_file_bool){
+        UserData *udt = get_user_data(request);
+        udt->data_pointer[udt->count] = form_data;
+        udt->callback_pointers[udt->count++] = &remove_folder;
+        mg_set_user_connection_data(request,udt);
+    }
+
+
     int total = mg_handle_form_request(request,&fdh);
     (void)total;
-    // bring last element to first to override __Request_pointer
-    form_data->queries[0] = form_data->queries[form_data->length-1];
-    form_data->length--;
-    return  form_data;
+    if(form_data->length>1){
+        // bring last element to first to override __Request_pointer
+        form_data->queries[0] = form_data->queries[form_data->length-1];
+        form_data->length--;
+        if(total!=form_data->length){
+            log_error("parsed form data is not equal to request form data ([%d != %d ])", form_data->length,total);
+        }
+        return  form_data;
+    }
+    log_info("form was empty.");
+    return NULL;
 }
 
-int log_message(const struct mg_connection* req,const char *log){
+int log_message(conRequest  req,const char *log){
     //to aovid unused varibale warning
     (void)req;
     log_debug("%s",log);
