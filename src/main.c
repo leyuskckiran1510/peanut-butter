@@ -2,10 +2,12 @@
 #include <string.h>
 #include "peanut_butter.h"
 #include "logger.h"
+
 ROUTED(home){
     if(is_method("GET")){
         return render_html("/htmls/index.html");
     }
+
     return render_html("/htmls/method_not_allowed.html");
 }
 
@@ -62,12 +64,26 @@ ROUTED(forms){
     return redirect("/forms",302);
 }
 
+ROUTED(text_response){
+    return render_text("<h1>Hello From PB<h1>");
+}
+
+ROUTED(raw_text_response){
+    return render_raw_text("<h1>Hello From PB<h1>");
+
+}
+
+
 int server(){
     URL("/",home);
     URL("/about",about);
     URL("/forms",forms);
+    URL("/txt1",text_response);
+    URL("/txt2",raw_text_response);
     VAR_URL("/%d/home",user_home);
     VAR_URL("/%s/contact",contact);
+
+
     return server_run("1234");
 }
 

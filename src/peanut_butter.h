@@ -90,11 +90,12 @@
                         default:to=UAT_UNKNOWN;break;\
                         }\
 
-                        
+                
 #define get_method() _get_method(FUNC_REQ_PARAM_NAME)
 #define is_method(method) (!strcmp(method,get_method()))
 #define render_html(file_name) _render_html(FUNC_REQ_PARAM_NAME,(file_name))
-#define render_text(text) _render_html(FUNC_REQ_PARAM_NAME,(text))
+#define render_text(text) _render_text(FUNC_REQ_PARAM_NAME,(text))
+#define render_raw_text(text) _render_raw_text(FUNC_REQ_PARAM_NAME,(text))
 #define render_template(file_name) _render_template(FUNC_REQ_PARAM_NAME,(file_name),FUNC_TEMPLATE_VAR_NAME)
 #define redirect(route,redir_code) _redirect(FUNC_REQ_PARAM_NAME,(route),(redir_code))
 
@@ -188,15 +189,18 @@ void PB(add_route(char* route,ViewCallback callback));
 
 void PB(add_var_route(char*  var_route,ViewCallbackArgs callback));
 
-
+/*
+start server at port: 
+*/
 int server_run(char *port);
 
+
+
+// these are inner funcitons with macro wrappers
 void _render_html(Request request,const char* file_name);
-
 void _render_text(Request request,const char * text);
-
+void _render_raw_text(Request request,const char *text);
 void _render_template(Request request,const char* file_name,TemplateVars templ_vars);
-
 void _redirect(Request request,char *to_url,uint16_t redirect_code);
 
 /*

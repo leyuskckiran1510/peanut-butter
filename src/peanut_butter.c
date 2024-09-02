@@ -398,7 +398,7 @@ static int begin_request_handler(struct mg_connection *conn){
         }
     }
 
-    if (!serve_file(conn,(request_info->local_uri+1))) {
+        if (!serve_file(conn,(request_info->local_uri+1))) {
         return 1;
     }
 
@@ -409,7 +409,7 @@ void _render_html(Request request,const char* file_name){
     if(!serve_file(request,file_name)){
         return;
     }
-    log_error("Failed To Render %s",file_name);
+    log_error("Failed To Render %s in (%s)",file_name,__func__);
     return;
 }
 
@@ -421,8 +421,20 @@ void _render_text(Request request,const char * text){
               "\r\n"
               "%s",
               strlen(text), text);
-    return  ;
+    return;
 }
+
+void _render_raw_text(Request request,const char *text){
+    mg_printf(request,
+              "HTTP/1.1 200 OK\r\n"
+              "Content-Type: text/text\r\n"
+              "Content-Length: %lu\r\n"
+              "\r\n"
+              "%s",
+              strlen(text), text);
+    return;
+}
+
 
 int not_white_space(char c){
     // ! to ~
