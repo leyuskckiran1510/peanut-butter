@@ -94,11 +94,12 @@
 #define get_method() _get_method(FUNC_REQ_PARAM_NAME)
 #define is_method(method) (!strcmp(method,get_method()))
 #define render_html(file_name) _render_html(FUNC_REQ_PARAM_NAME,(file_name))
+#define render_404(file_name) _render_404(FUNC_REQ_PARAM_NAME,(file_name))
 #define render_text(text) _render_text(FUNC_REQ_PARAM_NAME,(text))
 #define render_raw_text(text) _render_raw_text(FUNC_REQ_PARAM_NAME,(text))
 #define render_template(file_name) _render_template(FUNC_REQ_PARAM_NAME,(file_name),FUNC_TEMPLATE_VAR_NAME)
 #define redirect(route,redir_code) _redirect(FUNC_REQ_PARAM_NAME,(route),(redir_code))
-
+#define server_run(port) _server_run((port), SECURITY_HEADERS)
 
 typedef enum {
     UAT_INTEGER=0,UAT_i=0,
@@ -178,10 +179,40 @@ typedef struct{
     uint16_t count;
 }UserData;
 
+typedef struct { 
+
+} Session;
+
 #ifdef __PB_DOT_C__
     static Routes ROUTE_TABLE;
     static Routes VAR_ROUTE_TABLE;
+    static Session memory_session;
+    #define SECURITY 0
 #endif
+#if SECURITY > 0
+    #define SEC_IMG_SRC  "'self'"
+    #define SEC_MEDIA_SRC "'self'"
+    #define SEC_SCRIPT_SRC "'self'"
+#elif defined (SECURITY)
+    #define SEC_IMG_SRC  "*"
+    #define SEC_MEDIA_SRC "*"
+    #define SEC_SCRIPT_SRC "*"
+#else
+    #error Please Add `#define SECURITY value` at top of you backend file
+    #error You must choose one of the following
+    #error value = 0; no security (allow image,media and script to be loaded from anywhere)
+    #error value > 0; max security (only allow image,media and script from same domain)
+#endif
+
+static char SECURITY_HEADERS[] = "Content-Security-Policy: default-src 'self';"
+                                                           "img-src "    SEC_IMG_SRC ";"
+                                                           "media-src "  SEC_MEDIA_SRC ";"
+                                                           "script-src " SEC_SCRIPT_SRC  ";"
+                                                           "\r\n"
+                                  "X-Frame-Options: SAMEORIGIN \r\n"
+                                  "X-Content-Type-Options: nosniff \r\n"
+
+;
 
 const char * _get_method(Request request);
 
@@ -189,15 +220,14 @@ void PB(add_route(char* route,ViewCallback callback));
 
 void PB(add_var_route(char*  var_route,ViewCallbackArgs callback));
 
+
 /*
 start server at port: 
 */
-int server_run(char *port);
-
-
-
+int _server_run(char *port,char *security_headers);
 // these are inner funcitons with macro wrappers
 void _render_html(Request request,const char* file_name);
+void _render_404(Request request,const char* file_name);
 void _render_text(Request request,const char * text);
 void _render_raw_text(Request request,const char *text);
 void _render_template(Request request,const char* file_name,TemplateVars templ_vars);

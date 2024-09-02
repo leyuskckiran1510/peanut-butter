@@ -1,4 +1,6 @@
 #define LOG_LEVEL 4
+#define SECURITY 1
+
 #include <string.h>
 #include "peanut_butter.h"
 #include "logger.h"
@@ -8,7 +10,7 @@ ROUTED(home){
         return render_html("/htmls/index.html");
     }
 
-    return render_html("/htmls/method_not_allowed.html");
+    return render_404("/htmls/method_not_allowed.html");
 }
 
 URL_VAR_ROUTED(user_home){    
