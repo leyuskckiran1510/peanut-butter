@@ -4,3 +4,5 @@ peanut*
 pb_*
 test*
 user*
+*.bak
+*.db

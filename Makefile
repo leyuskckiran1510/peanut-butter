@@ -8,13 +8,14 @@ LIBDIR = lib
 BUILDDIR = build
 BINDIR = bin
 
-_CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 -O3 -Wall -Wextra  -Wuninitialized 
+_CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 -O3 -Wall -Wextra  -Wuninitialized
+LIBARIES = ""
 ifeq ($(OS),Windows_NT)
-CFLAGS = $(_CFLAGS)   -lws2_32 -DWIN32 
-CIVETWEB = civetwebwin.o
+	CFLAGS = $(_CFLAGS)   -lws2_32 -DWIN32 
+	LIBARIES = -l:civetwebwin.o -l:sqlite3.o
 else
-CFLAGS = $(_CFLAGS)
-CIVETWEB = civetweb.o
+	CFLAGS = $(_CFLAGS)
+	LIBARIES = -l:civetweb.o -l:sqlite3.o
 endif
 
 SOURCE = $(filter-out $(wildcard $(SRCDIR)/*thread*.c), $(wildcard $(SRCDIR)/*.c))
@@ -28,9 +29,9 @@ r:clean all run
 all:$(EXECUTABLE)
 
 $(EXECUTABLE):$(SOURCE_OBJ)
-	$(CC)  -l:$(CIVETWEB) $^ -o $@  $(CFLAGS)
+	$(CC)  $(LIBARIES) $^ -o $@  $(CFLAGS)
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
-	$(CC)  -l:$(CIVETWEB) -c $< -o $@ $(CFLAGS)
+	$(CC)  $(LIBARIES) -c $< -o $@ $(CFLAGS)
 run:
 	./$(EXECUTABLE)
 clean:

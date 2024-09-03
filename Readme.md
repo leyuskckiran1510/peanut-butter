@@ -48,12 +48,13 @@ web with speed out of the box.
         and fix the `civetweb` and make PR, [2024-Aug-13:23-11-03 PM]
         [ I didnot know about the standard of file upload ]
     completed [2024-Aug-21:22-10-21 PM]
-9. Persistent datas like Cookies and Sessions,
-
+9. Database support 
+    i. starting with sqlite the-OG
 
 
 # Features To add
 1. Middlewares/Authentications/Authorizations
+2. Persistent datas like Cookies and Sessions,
 3. RateLimiting
 4. HTTPS/test/support
  
