@@ -2,6 +2,7 @@
 
 #define __PEANUT_BUTTER__
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +10,7 @@
 #include <stdbool.h>
 #include "../include/civetweb.h"
 #include "logger.h"
-#include <errno.h>
-
+#include "database.h"
 
 #define MAX_ROUTES 1024
 #define MAX_QUERIES 50
@@ -179,16 +179,25 @@ typedef struct{
     uint16_t count;
 }UserData;
 
-typedef struct { 
-
-} Session;
-
 #ifdef __PB_DOT_C__
     static Routes ROUTE_TABLE;
     static Routes VAR_ROUTE_TABLE;
-    static Session memory_session;
     #define SECURITY 0
 #endif
+
+#ifndef SECURITY
+    #define SECURITY 0
+    #pragma message "\n=========================\n \
+\t Please Add `#define SECURITY value` at top of you backend file \n \
+\t You must choose one of the following \n \
+\t value = 0; no security {allow image,media and script to be loaded from anywhere} \n \
+\t value > 0; max security {only allow image,media and script from same domain} \n \
+\t Used `0` [ max-security from XSS ] by default,\n \
+========================= \n \n "
+
+#endif
+
+
 #if SECURITY > 0
     #define SEC_IMG_SRC  "'self'"
     #define SEC_MEDIA_SRC "'self'"
@@ -197,13 +206,8 @@ typedef struct {
     #define SEC_IMG_SRC  "*"
     #define SEC_MEDIA_SRC "*"
     #define SEC_SCRIPT_SRC "*"
-#else
-    #error Please Add `#define SECURITY value` at top of you backend file
-    #error You must choose one of the following
-    #error value = 0; no security (allow image,media and script to be loaded from anywhere)
-    #error value > 0; max security (only allow image,media and script from same domain)
 #endif
-
+#ifndef __PB_DOT_C__
 static char SECURITY_HEADERS[] = "Content-Security-Policy: default-src 'self';"
                                                            "img-src "    SEC_IMG_SRC ";"
                                                            "media-src "  SEC_MEDIA_SRC ";"
@@ -213,7 +217,7 @@ static char SECURITY_HEADERS[] = "Content-Security-Policy: default-src 'self';"
                                   "X-Content-Type-Options: nosniff \r\n"
 
 ;
-
+#endif
 const char * _get_method(Request request);
 
 void PB(add_route(char* route,ViewCallback callback));

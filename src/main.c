@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include "peanut_butter.h"
-#include "logger.h"
 
 ROUTED(home){
     if(is_method("GET")){

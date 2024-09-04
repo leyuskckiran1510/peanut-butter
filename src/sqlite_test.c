@@ -1,4 +1,4 @@
-#include "../include/sqlite3.h"
+/*#include "../include/sqlite3.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +19,7 @@ typedef struct {
 } sqlite_object; 
 
 int callback(void* a1,int a2,char **a3,char**a4){
+    (void)a1;
      for (int i = 0; i < a2; i++) {
         printf("%s = %s\n", a4[i], a3[i] ? a3[i] : "NULL");
     }
@@ -29,7 +30,6 @@ int callback(void* a1,int a2,char **a3,char**a4){
 
 int main(void){
     sqlite3 *connection;
-    sqlite3_stmt *res;
     char *error_buffer = calloc(1,MAX_ERROR_MSG_LEN);
     int status = sqlite3_open_v2("database.db",&connection,SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,"unix-dotfile");
     if(status!=SQLITE_OK){
@@ -42,4 +42,4 @@ int main(void){
     printf("Error if any [%s]\n",error_buffer);
     sqlite3_close(connection);
     return 0;
-}
+}*/

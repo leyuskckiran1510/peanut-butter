@@ -695,8 +695,11 @@ int field_get(const char *key, const char *value, size_t valuelen,
   (void)user_data;
   return MG_FORM_FIELD_HANDLE_NEXT;
 }
+
+/*not used for now*/
 int field_store(const char *path, long long file_size, void *user_data) {
   (void)user_data;
+  (void)path;
   (void)file_size;
   return MG_FORM_FIELD_HANDLE_NEXT;
 }
