@@ -42,9 +42,9 @@ typedef enum{
 }DatabaseType;
 
 
-typedef char* __database_uri_port_or_file_name;
-typedef char* __database_username;
-typedef char* __database_password;
+typedef const char* __database_uri_port_or_file_name;
+typedef const char* __database_username;
+typedef const char* __database_password;
 
 typedef struct DatabaseStruct DatabaseStruct;
 typedef DatabaseStruct* Database ;
@@ -52,8 +52,7 @@ typedef DatabaseStruct* Database ;
 struct DatabaseStruct {
     sqlite3 *__connection;
     int __is_initialized;
-    int (*init)(Database db,__database_uri_port_or_file_name uri_with_port,__database_username username,__database_password password);
-    int (*init_v2)(Database db,__database_uri_port_or_file_name uri_with_port,__database_username username,__database_password password,int flags);
+    int (*init)(Database db,const char * uri_with_port,const char* username,const char* password,int flags);
     int (*execute_single)(Database db,char * sql_query,DatabaseCallback callback,void* passthrough_data);
     int (*execute_multi)(Database db,char * sql_queries,DatabaseCallback callback,void* passthrough_data);
     int (*close_connection)(Database db);
@@ -61,4 +60,8 @@ struct DatabaseStruct {
 };
 
 Database database_select(DatabaseType db_type);
+int database_init(Database db,__database_uri_port_or_file_name uri,__database_username username,__database_password password,int flags);
+int database_execute(Database db,char * sql_queries,DatabaseCallback callback,void* passthrough_data);
+int database_close(Database db);
+void database_set_logger(Database db,int (*logger)(const char *msg));
 #endif

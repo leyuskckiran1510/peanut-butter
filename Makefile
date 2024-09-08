@@ -24,7 +24,7 @@ SOURCE_OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCE))
 EXECUTABLE = peanut
 
 
-r:clean all run
+r:all run
 
 all:$(EXECUTABLE)
 

@@ -16,24 +16,7 @@ int callback(void* a1,int a2,char **a3,char**a4){
     return 0;
 }
 
-int sqlite_init(Database db,char *uri_with_port,char* username,char* password){
-    // sqlite doesnot requires username and password
-    (void)username;
-    (void)password;
-
-    int status = sqlite3_open(uri_with_port,&db->__connection);
-     if(status!=SQLITE_OK){
-        if(db->logger){
-            db->logger("failed to initialize sqlite with error");
-            db->logger(strerror(errno));
-        }
-        return  DB_FAILED_INIT;
-    }
-
-    db->__is_initialized=1;
-    return DB_SUCESS_INIT;
-}
-int sqlite_init_v2(Database db,char *uri_with_port,char* username,char* password,int flags){
+int sqlite_init(Database db,const char *uri_with_port,const char* username,const char* password,int flags){
     (void)username;
     (void)password;
     int status = sqlite3_open_v2(uri_with_port,&db->__connection,flags | SQLITE_OPEN_CREATE,"unix-dotfile");
@@ -122,7 +105,6 @@ Database database_select(DatabaseType db_type){
     switch (db_type) {
        case DB_SQLITE3:{
         db->init = sqlite_init;
-        db->init_v2 = sqlite_init_v2;
         db->execute_single = sqlite_execute_single;
         db->execute_multi = sqlite_execute_multi;
         db->close_connection = sqlite_close_connection;
@@ -135,20 +117,35 @@ Database database_select(DatabaseType db_type){
     return db;
 }
 
-int  logger(const char *msg){
+int logger(const char *msg){
     printf("[logger] %s\n",msg);
     return 0;
 }
 
+int database_init(Database db,const char * uri,const char *username,const char*password,int flags){
+    return db->init(db,uri,username,password,flags);
+}
+
+int database_execute(Database db,char * sql_queries,DatabaseCallback callback,void* passthrough_data){
+    return db->execute_multi(db,sql_queries,callback,passthrough_data);
+}
+
+int database_close(Database db){
+    return  db->close_connection(db);
+}
+
+void database_set_logger(Database db,int (*logger)(const char *msg)){
+    db->logger = logger;
+}
 
 int main(void){
     Database db = database_select(DB_SQLITE3);
-    db->logger = logger;
-    int status = db->init_v2(db,"database.db",NULL,NULL,SQLITE_OPEN_READWRITE);
+    database_set_logger(db,logger);
+    database_init(db,"database.db",NULL,NULL,SQLITE_OPEN_READWRITE);
     char query[] ="CREATE TABLE IF NOT EXISTS account(id INTEGER PRIMARY KEY autoincrement,name varchar(250),age int,phone varchar(10));\
                     INSERT INTO account(name,age,phone) VALUES('kiran',12,98000); \
-                    SELECT id from account;"; 
-    db->execute_multi(db,query,callback,NULL);
-    db->close_connection(db);
+                    SELECT id from account;";
+    database_execute(db,query,callback,NULL);
+    database_close(db);
     return 0;
 }
