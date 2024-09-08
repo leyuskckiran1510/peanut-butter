@@ -42,4 +42,5 @@ int main(void){
     printf("Error if any [%s]\n",error_buffer);
     sqlite3_close(connection);
     return 0;
-}*/
+}
+*/

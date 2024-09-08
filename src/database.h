@@ -1,6 +1,7 @@
 #ifndef __PB_DATABASE__
     #define __PB_DATABASE__
 #include "../include/sqlite3.h"
+#include <stdint.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,7 @@
 #include <assert.h>
 
 #define MAX_ERROR_MSG_LEN 1024
-
+#define SQLITE_PRIVATE  
 typedef struct {
     int count;
     char **col_names;
@@ -44,11 +45,12 @@ typedef enum{
 typedef char* __database_uri_port_or_file_name;
 typedef char* __database_username;
 typedef char* __database_password;
-typedef struct Database Database;
 
-struct Database {
+typedef struct DatabaseStruct DatabaseStruct;
+typedef DatabaseStruct* Database ;
+
+struct DatabaseStruct {
     sqlite3 *__connection;
-    char *__error_buffer_pointer;
     int __is_initialized;
     int (*init)(Database db,__database_uri_port_or_file_name uri_with_port,__database_username username,__database_password password);
     int (*init_v2)(Database db,__database_uri_port_or_file_name uri_with_port,__database_username username,__database_password password,int flags);
@@ -56,6 +58,7 @@ struct Database {
     int (*execute_multi)(Database db,char * sql_queries,DatabaseCallback callback,void* passthrough_data);
     int (*close_connection)(Database db);
     int (*logger)(const char* log_message);
-} ;
-Database select_database(DatabaseType db_type);
+};
+
+Database database_select(DatabaseType db_type);
 #endif
