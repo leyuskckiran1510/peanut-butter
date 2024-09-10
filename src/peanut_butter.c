@@ -106,11 +106,11 @@ void query_track(Request request, UrlQueries *queries) {
   udt->callback_pointers[udt->count++] = &free_url_query;
   mg_set_user_connection_data(request, udt);
 }
-
 void remove_temp_folder(conRequest request) {
   char foldername[MAX_TEMP_FOLDER_FILE_SIZE];
   sprintf(foldername, TEMP_FOLDER_FMT(request));
-  if (remove(foldername)) {
+  struct stat sb;
+  if (stat(foldername, &sb) == 0 && remove(foldername)) {
     log_error("failed to remove temp folder (%s)\n\t=>%s", foldername,
               strerror(errno));
   }

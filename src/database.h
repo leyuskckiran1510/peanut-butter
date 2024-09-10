@@ -10,19 +10,22 @@
 
 #define MAX_ERROR_MSG_LEN 1024
 #define SQLITE_PRIVATE  
+#define database_query_fmt(x,...)  sprintf(QUERY_FMT_BUFFER,(x),##__VA_ARGS__);x=QUERY_FMT_BUFFER;
+
+
 typedef struct {
-    int count;
+    int cols;
     char **col_names;
     char **col_values;
-}Column ;
-
-typedef struct {
-   Column (*next_row)(void);
-   Column (*all_row)(void);
-   void (*stop)();
-} sqlite_object; 
+}Row;
 
 typedef int(*DatabaseCallback)(void* passthrough_data,int col_count,char **col_value,char **col_name);
+typedef void(*RowCallback)(void *passthrough_data,Row row);
+
+typedef struct{
+    void *passthrough_data;
+    RowCallback callback;
+}CallbackWrapper;
 
 typedef enum{
     // sucess
@@ -59,9 +62,11 @@ struct DatabaseStruct {
     int (*logger)(const char* log_message);
 };
 
+static char QUERY_FMT_BUFFER[1024];
+
 Database database_select(DatabaseType db_type);
 int database_init(Database db,__database_uri_port_or_file_name uri,__database_username username,__database_password password,int flags);
-int database_execute(Database db,char * sql_queries,DatabaseCallback callback,void* passthrough_data);
+int database_execute(Database db,char * sql_queries,RowCallback callback,void* passthrough_data);
 int database_close(Database db);
 void database_set_logger(Database db,int (*logger)(const char *msg));
 #endif
