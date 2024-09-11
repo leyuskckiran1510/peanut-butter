@@ -50,6 +50,8 @@ web with speed out of the box.
     completed [2024-Aug-21:22-10-21 PM]
 9. Database support 
     i. starting with sqlite the-OG
+        a. support for basic sqlite completed
+10. Add Costume DDL, support to define tables and relations
 
 
 # Features To add

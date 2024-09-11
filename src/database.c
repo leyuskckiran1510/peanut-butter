@@ -160,3 +160,9 @@ void database_set_logger(Database db, int (*logger)(const char *msg)) {
     throw("Datbase not initialized");
   db->logger = logger;
 }
+
+
+
+
+
+

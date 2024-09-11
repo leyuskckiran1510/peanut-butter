@@ -8,7 +8,7 @@ LIBDIR = lib
 BUILDDIR = build
 BINDIR = bin
 
-_CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 -O3 -Wall -Wextra  -Wuninitialized
+_CFLAGS = -I$(INCDIR) -L$(LIBDIR) -ggdb3 -O0 -Wall -Wextra  -Wuninitialized
 LIBARIES = ""
 ifeq ($(OS),Windows_NT)
 	CFLAGS = $(_CFLAGS)   -lws2_32 -DWIN32 
@@ -23,6 +23,7 @@ SOURCE_OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCE))
 
 EXECUTABLE = peanut
 
+p: pbsql
 
 r:all run
 
@@ -40,5 +41,9 @@ else
 	rm -r $(BUILDDIR)
 endif
 	mkdir build
+
+pbsql:
+	$(CC) $(SRCDIR)/pbsql_parser.c -o a.out $(CFLAGS)
+	./a.out
 
 .PHONY: all clean run
