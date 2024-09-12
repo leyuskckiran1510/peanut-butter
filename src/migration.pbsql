@@ -1,14 +1,11 @@
-
 Account{
-    id PK int,
+    id int PK,
     username string(250),
     password string(250),
 }
 
 Session{
-    id PK int,
+    ida int PK,
     session string(65),
-    address string(35),
-    created_date datetime,
-    expiration_date datetime,
+    address string(35)
 }

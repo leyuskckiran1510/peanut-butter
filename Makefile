@@ -23,7 +23,7 @@ SOURCE_OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCE))
 
 EXECUTABLE = peanut
 
-p: pbsql
+# p: pbsql
 
 r:all run
 

@@ -137,7 +137,7 @@ int server(){
         return 0;
     };
     database_set_logger(db,logger);
-    database_execute(db,"CREATE TABLE IF NOT EXISTS account(id INTEGER PRIMARY KEY autoincrement,username varchar(250), password varchar(10));",callback,NULL);
+    do_migration();
     URL("/",home);
     URL("/about",about);
     URL("/forms",forms);
