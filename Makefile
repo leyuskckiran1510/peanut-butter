@@ -23,7 +23,7 @@ SOURCE_OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCE))
 
 EXECUTABLE = peanut
 
-# p: pbsql
+p: pbsql
 
 r:all run
 
@@ -43,7 +43,8 @@ endif
 	mkdir build
 
 pbsql:
-	$(CC) $(SRCDIR)/pbsql_parser.c -o a.out $(CFLAGS)
+	$(CC) -c $(SRCDIR)/database.c -o db.o $(CFLAGS)
+	$(CC)  $(LIBARIES) db.o $(SRCDIR)/pbsql_parser.c -o a.out $(CFLAGS)
 	./a.out
 
 .PHONY: all clean run

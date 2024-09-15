@@ -1,13 +1,8 @@
-#include "database.h"
-#define LOG_LEVEL 4
-#define SECURITY 1
-
 #include <stdio.h>
 #include <string.h>
 #include "peanut_butter.h"
 
-// make db global such that it is easier to access through out functions
-Database db;
+
 
 ROUTED(home){
     if(is_method("GET")){
@@ -80,6 +75,7 @@ ROUTED(raw_text_response){
 
 void login_callback(void *passthrough,Row row){
     *(int *)passthrough = 1;
+    (void) row;
 }
 
 ROUTED(login){
@@ -112,7 +108,7 @@ ROUTED(signup){
         char *query_fmt = "INSERT INTO account(username,password) VALUES ('%s','%s');";
         database_query_fmt(query_fmt,username,password);
         int status = database_execute(db,query_fmt,login_callback,NULL);
-        if (DB_SUCESS_EXEC){
+        if (status == DB_SUCESS_EXEC){
             return redirect("/login",303);
         }
         return redirect("/signup",303);
@@ -125,6 +121,7 @@ int logger(const char * msg){
 }
 
 void callback(void * passthroug_data,Row row){
+    (void)passthroug_data;
     for(int i=0;i<row.cols;i++){
         log_debug("%s -> %s",row.col_names[i],row.col_values[i]);
     }
@@ -137,7 +134,7 @@ int server(){
         return 0;
     };
     database_set_logger(db,logger);
-    do_migration();
+    do_migration(db,0);
     URL("/",home);
     URL("/about",about);
     URL("/forms",forms);

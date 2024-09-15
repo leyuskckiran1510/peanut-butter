@@ -115,6 +115,9 @@ PRIVATE int sqlite_close_connection(Database db) {
 }
 
 Database database_select(DatabaseType db_type) {
+  // to remove warning
+  (void)QUERY_FMT_BUFFER;
+
   Database db = calloc(sizeof(DatabaseStruct), 1);
   switch (db_type) {
     case DB_SQLITE3: {
@@ -160,9 +163,3 @@ void database_set_logger(Database db, int (*logger)(const char *msg)) {
     throw("Datbase not initialized");
   db->logger = logger;
 }
-
-
-
-
-
-

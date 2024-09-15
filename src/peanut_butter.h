@@ -1,6 +1,7 @@
 #ifndef __PEANUT_BUTTER__
 
 #define __PEANUT_BUTTER__
+#include "settings.h"
 
 #include <errno.h>
 #include <stdint.h>
@@ -11,11 +12,9 @@
 #include "../include/civetweb.h"
 #include "logger.h"
 #include "database.h"
+#include "pbsql_parser.c"
 
-#define MAX_ROUTES 1024
-#define MAX_QUERIES 50
-#define MAX_TEMPL_VAR_NAME 30
-#define TEMPL_CHUNK 100
+
 
 #ifdef _WIN32
   #define OS_PATH_SEP "\\" 
@@ -23,14 +22,13 @@
   #define OS_PATH_SEP "/"
 #endif
 
-#define TEMP_FOLDER_PREFIX "user_upload_"
+#define MAX_TEMP_FOLDER_NAME 35
 #define TEMP_FOLDER_FMT(request)  TEMP_FOLDER_PREFIX"%p",request
-#define TEMP_TEMPL_FILE_PREFIX "pb_tmp_"
-#define MAX_TEMP_FOLDER_FILE_SIZE 35
 
 #define PB(x)  _pb_##x
-#define free(x)  {free(x);x=NULL;}
-
+#ifndef free
+    #define free(x)  {if(x!=NULL){free(x);x=NULL;}}
+#endif
 
 #define FUNC_TEMPLATE_VAR_NAME __template_variable
 #define FUNC_REQ_PARAM_NAME __request_param
@@ -186,13 +184,13 @@ typedef struct{
 #endif
 
 #ifndef SECURITY
-    #define SECURITY 0
+    #define SECURITY 1
     #pragma message "\n=========================\n \
 \t Please Add `#define SECURITY value` at top of you backend file \n \
 \t You must choose one of the following \n \
 \t value = 0; no security {allow image,media and script to be loaded from anywhere} \n \
 \t value > 0; max security {only allow image,media and script from same domain} \n \
-\t Used `0` [ max-security from XSS ] by default,\n \
+\t Used `1` [ max-security from XSS ] by default,\n \
 ========================= \n \n "
 
 #endif

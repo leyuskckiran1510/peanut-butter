@@ -107,7 +107,7 @@ void query_track(Request request, UrlQueries *queries) {
   mg_set_user_connection_data(request, udt);
 }
 void remove_temp_folder(conRequest request) {
-  char foldername[MAX_TEMP_FOLDER_FILE_SIZE];
+  char foldername[MAX_TEMP_FOLDER_NAME];
   sprintf(foldername, TEMP_FOLDER_FMT(request));
   struct stat sb;
   if (stat(foldername, &sb) == 0 && remove(foldername)) {
@@ -547,8 +547,8 @@ void _render_template(Request request, const char *file_name,
   // convert the unique memory address to unique file name
   size_t tmp_file_id = *(size_t *)request;
   // max int has 10 digits for 32bit, and 20 digits for 64bits
-  // so to  cover it MAX_TEMP_FOLDER_FILE_SIZE will be enough
-  char tmp_file_name[MAX_TEMP_FOLDER_FILE_SIZE];
+  // so to  cover it MAX_TEMP_FOLDER_NAME will be enough
+  char tmp_file_name[MAX_TEMP_FOLDER_NAME];
   sprintf(tmp_file_name, TEMP_TEMPL_FILE_PREFIX "%lu.html", tmp_file_id);
 
   tmp_fp = fopen(tmp_file_name, "w");
@@ -674,7 +674,7 @@ int field_found(const char *key, const char *filename, char *path,
                 size_t pathlen, void *user_data) {
   if (filename[0]) {
     FormDatas *fd = user_data;
-    char folder_path[MAX_TEMP_FOLDER_FILE_SIZE];
+    char folder_path[MAX_TEMP_FOLDER_NAME];
     sprintf(folder_path, TEMP_FOLDER_FMT(fd->queries[0].value));
     mkdir(folder_path, 0777);
     sprintf(path, "%s" OS_PATH_SEP "%s", folder_path, filename);
