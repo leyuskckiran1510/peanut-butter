@@ -13,8 +13,11 @@
 #define MAX_TABLE_PREP_LENGTH MAX_NAME_SIZE*(MAX_PROPERTY)*(MAX_ATTRIBUTES) + __SOME_OFFSET
 
 #ifndef free 
-#define free(x)  if(x!=NULL){free(x);x=NULL;}
+#define free(x)  {if(x!=NULL){free(x);x=NULL;}}
 #endif
+
+#define PBSQL_IMPLEMENTATION
+#ifdef PBSQL_IMPLEMENTATION
 
 static char *TRANSLATION_MAP_KEYS[] = {
     "pk",
@@ -28,7 +31,7 @@ static char *TRANSLATION_MAP_VALUES[] = {
 };
 static int TRANSLATION_MAP_COUNT = 3;
 
-static char table_head[] = "CREATE TABLE IF NOT EXISTS";
+static char CREATE_TABLE_QUERY_HEAD[] = "CREATE TABLE IF NOT EXISTS";
 
 typedef struct {
     char *name;
@@ -93,7 +96,7 @@ static void prep_table_query(Table *table){
     // CREATE TABLE IF NOT EXISTS %s ( ...... );
     table->init_query = calloc(MAX_TABLE_PREP_LENGTH,sizeof(char));
     int index=0;
-    index = sprintf(table->init_query,"%s %s ( ",table_head,table->name);
+    index = sprintf(table->init_query,"%s %s ( ",CREATE_TABLE_QUERY_HEAD,table->name);
     for (int i = 0; i < table->attribute_count; ++i){
         index += sprintf((table->init_query+index)," %s ",table->attributes[i].name);
         for (int j = 0; j <= table->attributes[i].property_count; ++j){
@@ -334,11 +337,54 @@ void do_migration(Database db,int debug){
     free_tables(tables,table_count);
 }
 
+typedef enum{
+    DB_NOT = 0,
+    DB_AND,
+    DB_OR,
+    DB_XOR,
+}DB_OPERATORS;
 
-// int main(){
-//     Database db = database_select(DB_SQLITE3);
-//     database_init(db,"database1.db",NULL,NULL,SQLITE_OPEN_READWRITE);
-//     database_set_logger(db,ll_loger);
-//     do_migration(db,1);
-//     database_close(db);
-// }
+typedef enum{
+    CRUD_READ_SINGLE=0,
+    CRUD_READ_ALL,
+    CRUD_INSERT,
+    CRUD_UPDATE,
+    CRUD_DELETE,
+    CRUD_DELETE_SAFE,
+    CRUD_SET,
+}CRUD_TYPE;
+
+#define WHERE(...) "where",##__VA_ARGS__ 
+#define IS(x)   "==", x  
+#define LIKE(x)  "LIKE", x  
+#define AND DB_AND
+#define FOR(col_name,value) #col_name,value
+#define SET(...) "set",##__VA_ARGS__
+
+void god_tier_query_builder(CRUD_TYPE crud_type ,char *table_name,...){
+
+}
+
+#define database_find_in(table_name,...) god_tier_query_builder(CRUD_READ_SINGLE,(table_name),##__VA_ARGS__)
+#define database_findall_in(table_name,...) god_tier_query_builder(CRUD_READ_ALL,(table_name),##__VA_ARGS__)
+#define database_add_in(table_name,...) god_tier_query_builder(CRUD_INSERT,(table_name),##__VA_ARGS__)
+#define database_update_in(table_name,...) god_tier_query_builder(CRUD_UPDATE,(table_name),##__VA_ARGS__)
+#define database_remove_in(table_name,...) god_tier_query_builder(CRUD_DELETE_SAFE,(table_name),##__VA_ARGS__)
+#define database_purge_in(table_name,...) god_tier_query_builder(CRUD_DELETE,(table_name),##__VA_ARGS__)
+
+int main(){
+    Database db = database_select(DB_SQLITE3);
+    database_init(db,"database1.db",NULL,NULL,SQLITE_OPEN_READWRITE);
+    char username[] = "tester";
+    char password[] = "password";
+    CallbackWrapper callback;
+    database_find_in("table_name",WHERE(username,IS("tester"),AND,password,IS("password")));
+    database_findall_in("table_name",WHERE(username,IS("tester"),AND,password,IS("password")),callback);
+    database_add_in("table_name",FOR(name,username),FOR(password,password));
+    database_update_in("table_name",WHERE(username,LIKE("a%")),SET(FOR(username,"unknown"),FOR(role,"admin")));
+    database_set_logger(db,ll_loger);
+    do_migration(db,1);
+    database_close(db);
+}
+
+#endif
