@@ -134,10 +134,10 @@ Database database_select(DatabaseType db_type) {
   return db;
 }
 
-PRIVATE int db_logger(const char *msg) {
-  printf("[logger] %s\n", msg);
-  return 0;
-}
+// PRIVATE int db_logger(const char *msg) {
+//   printf("[logger] %s\n", msg);
+//   return 0;
+// }
 
 int database_init(Database db, const char *uri, const char *username,
                   const char *password, int flags) {

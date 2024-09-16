@@ -1,6 +1,8 @@
 #include "database.h"
+
 #include <assert.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +17,8 @@
 #ifndef free 
 #define free(x)  {if(x!=NULL){free(x);x=NULL;}}
 #endif
+
+#define static 
 
 #define PBSQL_IMPLEMENTATION
 #ifdef PBSQL_IMPLEMENTATION
@@ -45,6 +49,8 @@ typedef struct {
     int attribute_count;
     char *init_query;
 } Table;
+
+static Table *tables = NULL;
 
 static void to_lower_case(char *word,int len){
     if(len<0) len = strlen(word);
@@ -319,30 +325,29 @@ static int ll_loger(const char *msg){
 
 }
 
-void do_migration(Database db,int debug){
+void do_migration(Database db,int debug,int *table_count){
     FILE *fp = fopen("src/migration.pbsql","r");
-    int table_count = 0;
-    Table *tables = parse_tables(fp,&table_count);
-    prep_tables_query(tables,table_count);
-    db->logger("Migrating tables...");
-    for(int i=0;i<table_count;i++){
-        db->logger(tables[i].name);
-        db->logger(tables[i].init_query);
+    tables = parse_tables(fp,table_count);
+    prep_tables_query(tables,(*table_count));
+    if(db->logger)
+        db->logger("Migrating tables...");
+    for(int i=0;i< (*table_count);i++){
+        if(db->logger){
+            db->logger(tables[i].name);
+            db->logger(tables[i].init_query);
+        }
         database_execute(db,tables[i].init_query,lcl_callback,NULL);
     }
     if(debug){
-        print_tables(tables,table_count);
+        print_tables(tables,(*table_count));
     }
     fclose(fp);
-    free_tables(tables,table_count);
 }
 
-typedef enum{
-    DB_NOT = 0,
-    DB_AND,
-    DB_OR,
-    DB_XOR,
-}DB_OPERATORS;
+#define     NOT   " NOT "
+#define     AND   " AND " 
+#define     OR    " OR " 
+#define     XOR   " XOR " 
 
 typedef enum{
     CRUD_READ_SINGLE=0,
@@ -351,40 +356,164 @@ typedef enum{
     CRUD_UPDATE,
     CRUD_DELETE,
     CRUD_DELETE_SAFE,
-    CRUD_SET,
 }CRUD_TYPE;
 
-#define WHERE(...) "where",##__VA_ARGS__ 
-#define IS(x)   "==", x  
-#define LIKE(x)  "LIKE", x  
-#define AND DB_AND
-#define FOR(col_name,value) #col_name,value
-#define SET(...) "set",##__VA_ARGS__
+#define SEPRATE_VALUES_BY_COMMA "\x01" //   Start of Heading character
+#define WRAP_VALUES_SINGLE_QUOTE "\x02" // Start of Text character
+#define FLAG_RST  "\x03" // End of Text Character
+#define WHERE(...) " WHERE ",##__VA_ARGS__ 
+#define IS(x)   " == " ,"'", x,"'"
+#define LIKE(x)  " LIKE ","'", x,"'"
+#define FOR(...) "(", SEPRATE_VALUES_BY_COMMA," " , ##__VA_ARGS__ , SEPRATE_VALUES_BY_COMMA ,") ",FLAG_RST
+#define VALUES(...) "VALUES "," ( ",WRAP_VALUES_SINGLE_QUOTE," ", ##__VA_ARGS__,WRAP_VALUES_SINGLE_QUOTE,") ",FLAG_RST
+#define SET(...) " SET ",##__VA_ARGS__
+#define MAX_LONG_DB_QUERY 1024
 
-void god_tier_query_builder(CRUD_TYPE crud_type ,char *table_name,...){
+Table  check_and_find_table(const char *table_name){
+    int tbl_idx = 0;
+    while(1){
+        Table table = tables[tbl_idx++];
+        assert(table.name!=NULL && "no such table ");
+        if(!strcmp(table_name,table.name)) return table;
+    }
 
 }
 
-#define database_find_in(table_name,...) god_tier_query_builder(CRUD_READ_SINGLE,(table_name),##__VA_ARGS__)
-#define database_findall_in(table_name,...) god_tier_query_builder(CRUD_READ_ALL,(table_name),##__VA_ARGS__)
-#define database_add_in(table_name,...) god_tier_query_builder(CRUD_INSERT,(table_name),##__VA_ARGS__)
-#define database_update_in(table_name,...) god_tier_query_builder(CRUD_UPDATE,(table_name),##__VA_ARGS__)
-#define database_remove_in(table_name,...) god_tier_query_builder(CRUD_DELETE_SAFE,(table_name),##__VA_ARGS__)
-#define database_purge_in(table_name,...) god_tier_query_builder(CRUD_DELETE,(table_name),##__VA_ARGS__)
+int costume_copy(char*s1,char*s2){
+    if(s2==NULL) return 0;
+    int count = 0;
+    while(s2[count]){
+        s1[count]=s2[count];
+        count++;
+    }
+    return count;
+}
+void put_char(char *buffer,int *offset,char __char){
+    (buffer+(*offset))[0] =  __char;
+    (*offset)++;
+}
+
+
+#define COMMA_FLAG        0b000000010
+#define SINGLE_QUOTE_FLAG 0b000000001
+
+char char_from_flag(int flag){
+    if (flag & COMMA_FLAG)
+        return ',';
+    if (flag & SINGLE_QUOTE_FLAG)
+        return '\'';
+    return ' ';
+}
+
+void god_tier_query_builder(CRUD_TYPE crud_type ,char *table_name,...){
+    (void) crud_type;
+    (void) table_name;
+    va_list vaargs;
+    char *query_buffer = calloc(MAX_LONG_DB_QUERY,sizeof(char));
+    int buffer_offset = 0;
+    char *cur = NULL;
+    int started = 0;
+    Table table = check_and_find_table(table_name);
+    CallbackWrapper callback;
+    switch(crud_type){
+    case CRUD_READ_ALL:
+    case CRUD_READ_SINGLE:{
+        char *query_head = "SELECT * FROM ";
+        buffer_offset = costume_copy(query_buffer,query_head);
+        break;
+    }
+    case CRUD_DELETE:
+    case CRUD_DELETE_SAFE:{
+        char *query_head = "DELETE FROM ";
+        buffer_offset = costume_copy(query_buffer,query_head);
+        break;
+    }
+    case CRUD_INSERT:{
+        char *query_head = "INSERT INTO ";
+        buffer_offset = costume_copy(query_buffer,query_head);
+        break;
+    }
+    case CRUD_UPDATE:{
+        char *query_head = "UPDATE "; 
+        buffer_offset = costume_copy(query_buffer,query_head);
+        break;
+    }
+    }
+
+    va_start(vaargs,table_name);
+    
+    if(crud_type == CRUD_READ_ALL){
+        callback = va_arg(vaargs,CallbackWrapper);
+    }
+
+    buffer_offset += costume_copy((query_buffer+buffer_offset),table_name);
+    put_char(query_buffer,&buffer_offset,' ');
+    int char_to_append_flag = 0;
+    while(cur || (!cur && !started++)){
+        cur = va_arg (vaargs,void *);
+        if ( cur && cur[0] == FLAG_RST[0]){
+            char_to_append_flag = 0;
+            continue;
+        }
+        if(cur && cur[0] == WRAP_VALUES_SINGLE_QUOTE[0]){
+            char_to_append_flag ^= SINGLE_QUOTE_FLAG;
+            continue;
+        }
+        if(cur && cur[0] == SEPRATE_VALUES_BY_COMMA[0]){
+            char_to_append_flag ^= COMMA_FLAG;
+            continue;
+        }
+        if(char_to_append_flag){
+            int temp = char_to_append_flag;
+            int count = 0;
+                printf("%b\n",temp);
+            while(temp){
+                put_char(query_buffer,&buffer_offset,char_from_flag(temp));
+                temp>>=count;
+                temp<<=count++;
+            }
+        }
+        buffer_offset += costume_copy((query_buffer+buffer_offset),cur);
+        // if(char_to_append_flag){
+        //     int temp = char_to_append_flag;
+        //     int count = 0;
+        //     while(temp){
+        //         temp>>=count;
+        //         temp<<=count++;
+        //         put_char(query_buffer,&buffer_offset,char_from_flag(temp));
+        //     }
+        // }
+    }
+    printf(" Final Query [ %s ]\n",query_buffer);
+    put_char(query_buffer,&buffer_offset,';');
+    (query_buffer+buffer_offset)[0] = '\0';
+    va_end(vaargs);
+    free(query_buffer);
+}
+
+#define database_find_in(table_name,...) god_tier_query_builder(CRUD_READ_SINGLE,(table_name),##__VA_ARGS__,NULL)
+#define database_findall_in(table_name,...) god_tier_query_builder(CRUD_READ_ALL,(table_name),##__VA_ARGS__,NULL)
+#define database_add_in(table_name,...) god_tier_query_builder(CRUD_INSERT,(table_name),##__VA_ARGS__,NULL)
+#define database_update_in(table_name,...) god_tier_query_builder(CRUD_UPDATE,(table_name),##__VA_ARGS__,NULL)
+#define database_remove_in(table_name,...) god_tier_query_builder(CRUD_DELETE_SAFE,(table_name),##__VA_ARGS__,NULL)
+#define database_purge_in(table_name,...) god_tier_query_builder(CRUD_DELETE,(table_name),##__VA_ARGS__,NULL)
 
 int main(){
     Database db = database_select(DB_SQLITE3);
+    int table_count = 0;
     database_init(db,"database1.db",NULL,NULL,SQLITE_OPEN_READWRITE);
+    database_set_logger(db,ll_loger);
+    do_migration(db,0,&table_count);
+
     char username[] = "tester";
     char password[] = "password";
     CallbackWrapper callback;
-    database_find_in("table_name",WHERE(username,IS("tester"),AND,password,IS("password")));
-    database_findall_in("table_name",WHERE(username,IS("tester"),AND,password,IS("password")),callback);
-    database_add_in("table_name",FOR(name,username),FOR(password,password));
-    database_update_in("table_name",WHERE(username,LIKE("a%")),SET(FOR(username,"unknown"),FOR(role,"admin")));
-    database_set_logger(db,ll_loger);
-    do_migration(db,1);
+    database_find_in("Account",WHERE("username",IS(username),AND,"password",IS(password)));
+    // database_findall_in("Account",callback,WHERE(username,IS("tester"),AND,password,IS("password")));
+    database_add_in("Account",FOR("username","password"),VALUES(username,password));
+    // database_update_in("Account",WHERE(username,LIKE("a%")),SET(FOR(username,"unknown"),FOR(role,"admin")));
     database_close(db);
+    free_tables(tables,table_count);
 }
 
 #endif
